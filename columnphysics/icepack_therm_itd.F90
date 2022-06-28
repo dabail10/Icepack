@@ -2249,10 +2249,11 @@ endif  ! kitd = 1
 
 call lateral_melt (dt,        ncat,          &
                    nilyr,     nslyr,         &
-                   n_aero,    n_mp, fpond,         &
+                   n_aero,    n_mp,          &
+                   fpond,                    &
                    fresh,     fsalt,         &
                    fhocn,     faero_ocn,     &
-                   l_fiso_ocn,               &
+                   fmp_ocn,   l_fiso_ocn,    &
                    rside,     meltl,         &
                    fside,     sss,           &
                    aicen,     vicen,         &
