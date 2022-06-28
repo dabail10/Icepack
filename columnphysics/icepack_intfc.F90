@@ -1,21 +1,21 @@
 !=======================================================================
 ! Copyright (c) 2022, Triad National Security, LLC
 ! All rights reserved.
-!                
+!
 ! Copyright 2022. Triad National Security, LLC. This software was
-! produced under U.S. Government contract DE-AC52-06NA25396 for Los 
+! produced under U.S. Government contract DE-AC52-06NA25396 for Los
 ! Alamos National Laboratory (LANL), which is operated by Triad
-! National Security, LLC for the U.S. Department of Energy. The U.S.  
-! Government has rights to use, reproduce, and distribute this software.  
-! NEITHER THE GOVERNMENT NOR TRIAD NATIONAL SECURITY, LLC MAKES ANY  
+! National Security, LLC for the U.S. Department of Energy. The U.S.
+! Government has rights to use, reproduce, and distribute this software.
+! NEITHER THE GOVERNMENT NOR TRIAD NATIONAL SECURITY, LLC MAKES ANY
 ! WARRANTY, EXPRESS OR IMPLIED, OR ASSUMES ANY LIABILITY FOR THE USE OF
-! THIS SOFTWARE. If software is modified to produce derivative works, 
-! such modified software should be clearly marked, so as not to confuse 
+! THIS SOFTWARE. If software is modified to produce derivative works,
+! such modified software should be clearly marked, so as not to confuse
 ! it with the version available from LANL.
 !
 ! The full license and distribution policy are available from
 ! https://github.com/CICE-Consortium
-! 
+!
 !=======================================================================
 !
 ! authors: Elizabeth C. Hunke, LANL
@@ -42,6 +42,7 @@
       use icepack_tracers,    only: icepack_max_don    => max_don
       use icepack_tracers,    only: icepack_max_fe     => max_fe
       use icepack_tracers,    only: icepack_max_aero   => max_aero
+      use icepack_tracers,    only: icepack_max_mp     => max_mp
       use icepack_tracers,    only: icepack_max_iso    => max_iso
       use icepack_tracers,    only: icepack_nmodal1    => nmodal1
       use icepack_tracers,    only: icepack_nmodal2    => nmodal2
@@ -127,7 +128,7 @@
 
       implicit none
 
-      public 
+      public
 
       public :: icepack_configure
 

@@ -11,16 +11,16 @@
 ! Hibler, W. D. III, 1980: Modeling a variable thickness sea ice
 !  cover, Mon. Wea. Rev., 108, 1943-1973, 1980.
 !
-! Lipscomb, W. H., E. C. Hunke, W. Maslowski, and J. Jakacki, 2007: 
+! Lipscomb, W. H., E. C. Hunke, W. Maslowski, and J. Jakacki, 2007:
 !  Improving ridging schemes for high-resolution sea ice models.
 !  J. Geophys. Res. 112, C03S91, doi:10.1029/2005JC003355.
-! 
+!
 ! Rothrock, D. A., 1975: The energetics of the plastic deformation of
 !  pack ice by ridging, J. Geophys. Res., 80, 4514-4519.
 !
-! Thorndike, A. S., D. A. Rothrock, G. A. Maykut, and R. Colony, 
-!  1975: The thickness distribution of sea ice, J. Geophys. Res., 
-!  80, 4501-4513. 
+! Thorndike, A. S., D. A. Rothrock, G. A. Maykut, and R. Colony,
+!  1975: The thickness distribution of sea ice, J. Geophys. Res.,
+!  80, 4501-4513.
 !
 ! authors: William H. Lipscomb, LANL
 !          Elizabeth C. Hunke, LANL
@@ -41,13 +41,13 @@
       use icepack_parameters, only: kstrength, krdg_partic, krdg_redist, mu_rdg
       use icepack_parameters, only: heat_capacity, conserv_check
 
-      use icepack_tracers, only: tr_pond_topo, tr_aero, tr_iso, tr_brine, ntrcr, nbtrcr
+      use icepack_tracers, only: tr_pond_topo, tr_aero, tr_mp, tr_iso, tr_brine, ntrcr, nbtrcr
       use icepack_tracers, only: nt_qice, nt_qsno, nt_fbri, nt_sice
-      use icepack_tracers, only: nt_alvl, nt_vlvl, nt_aero, nt_isosno, nt_isoice
+      use icepack_tracers, only: nt_alvl, nt_vlvl, nt_aero, nt_mp, nt_isosno, nt_isoice
       use icepack_tracers, only: nt_apnd, nt_hpnd
       use icepack_tracers, only: n_iso
       use icepack_tracers, only: icepack_compute_tracers
-                           
+
       use icepack_warnings, only: warnstr, icepack_warnings_add
       use icepack_warnings, only: icepack_warnings_setabort, icepack_warnings_aborted
 
@@ -64,20 +64,20 @@
                 icepack_ice_strength, &
                 icepack_step_ridge
 
-      real (kind=dbl_kind), parameter :: & 
+      real (kind=dbl_kind), parameter :: &
          exp_argmax = 100.0_dbl_kind, &    ! maximum argument of exponential for underflow
-         Cs = p25         , & ! fraction of shear energy contrbtng to ridging 
-         fsnowrdg = p5    , & ! snow fraction that survives in ridging 
-         Gstar  = p15     , & ! max value of G(h) that participates 
-                              ! (krdg_partic = 0) 
-         astar  = p05     , & ! e-folding scale for G(h) participation 
-!echmod         astar  = p1        , & ! e-folding scale for G(h) participation 
-                              ! (krdg_partic = 1) 
-         maxraft= c1      , & ! max value of hrmin - hi = max thickness 
-                              ! of ice that rafts (m) 
-         Hstar  = c25         ! determines mean thickness of ridged ice (m) 
-                              ! (krdg_redist = 0) 
-                              ! Flato & Hibler (1995) have Hstar = 100 
+         Cs = p25         , & ! fraction of shear energy contrbtng to ridging
+         fsnowrdg = p5    , & ! snow fraction that survives in ridging
+         Gstar  = p15     , & ! max value of G(h) that participates
+                              ! (krdg_partic = 0)
+         astar  = p05     , & ! e-folding scale for G(h) participation
+!echmod         astar  = p1        , & ! e-folding scale for G(h) participation
+                              ! (krdg_partic = 1)
+         maxraft= c1      , & ! max value of hrmin - hi = max thickness
+                              ! of ice that rafts (m)
+         Hstar  = c25         ! determines mean thickness of ridged ice (m)
+                              ! (krdg_redist = 0)
+                              ! Flato & Hibler (1995) have Hstar = 100
 
 !=======================================================================
 
@@ -92,6 +92,7 @@
 
       subroutine ridge_ice (dt,          ndtd,       &
                             ncat,        n_aero,     &
+                            n_mp,                    &
                             nilyr,       nslyr,      &
                             ntrcr,       hin_max,    &
                             rdg_conv,    rdg_shear,  &
@@ -107,7 +108,8 @@
                             dvirdgdt,    opening,    &
                             fpond,                   &
                             fresh,       fhocn,      &
-                            faero_ocn,   fiso_ocn,   &
+                            faero_ocn,   fmp_ocn,    &
+                            fiso_ocn,                &
                             aparticn,    krdgn,      &
                             aredistn,    vredistn,   &
                             dardg1ndt,   dardg2ndt,  &
@@ -121,10 +123,11 @@
          nilyr , & ! number of ice layers
          nslyr , & ! number of snow layers
          n_aero, & ! number of aerosol tracers
+         n_mp, & ! number of aerosol tracers
          ntrcr     ! number of tracers in use
 
       real (kind=dbl_kind), intent(in) :: &
-         mu_rdg , & ! gives e-folding scale of ridged ice (m^.5) 
+         mu_rdg , & ! gives e-folding scale of ridged ice (m^.5)
          dt             ! time step
 
       real (kind=dbl_kind), dimension(0:ncat), intent(inout) :: &
@@ -133,16 +136,16 @@
       real (kind=dbl_kind), intent(in) :: &
          rdg_conv   , & ! normalized energy dissipation due to convergence (1/s)
          rdg_shear      ! normalized energy dissipation due to shear (1/s)
- 
+
       real (kind=dbl_kind), dimension (:), intent(inout) :: &
          aicen      , & ! concentration of ice
          vicen      , & ! volume per unit area of ice          (m)
          vsnon          ! volume per unit area of snow         (m)
- 
-      real (kind=dbl_kind), dimension (:,:), intent(inout) :: & 
-         trcrn          ! ice tracers 
 
-      real (kind=dbl_kind), intent(inout) :: & 
+      real (kind=dbl_kind), dimension (:,:), intent(inout) :: &
+         trcrn          ! ice tracers
+
+      real (kind=dbl_kind), intent(inout) :: &
          aice0          ! concentration of open water
 
       integer (kind=int_kind), dimension (:), intent(in) :: &
@@ -182,12 +185,15 @@
          aparticn   , & ! participation function
          krdgn      , & ! mean ridge thickness/thickness of ridging ice
          araftn     , & ! rafting ice area
-         vraftn     , & ! rafting ice volume 
+         vraftn     , & ! rafting ice volume
          aredistn   , & ! redistribution function: fraction of new ridge area
          vredistn       ! redistribution function: fraction of new ridge volume
 
       real (kind=dbl_kind), dimension(:), intent(inout), optional :: &
          faero_ocn      ! aerosol flux to ocean (kg/m^2/s)
+
+      real (kind=dbl_kind), dimension(:), intent(inout), optional :: &
+         fmp_ocn        ! microplastics flux to ocean (kg/m^2/s)
 
       real (kind=dbl_kind), dimension(:), intent(inout) :: &
          fiso_ocn       ! isotope flux to ocean (kg/m^2/s)
@@ -196,7 +202,7 @@
 
       real (kind=dbl_kind), dimension (ncat) :: &
          eicen          ! energy of melting for each ice layer (J/m^2)
- 
+
       real (kind=dbl_kind), dimension (ncat) :: &
          esnon, &       ! energy of melting for each snow layer (J/m^2)
          vbrin, &       ! ice volume with defined by brine height (m)
@@ -222,6 +228,9 @@
       real (kind=dbl_kind), dimension (n_aero) :: &
          maero          ! aerosol mass added to ocean (kg m-2)
 
+      real (kind=dbl_kind), dimension (n_mp) :: &
+         mmp          ! microplastic mass added to ocean (kg m-2)
+
       real (kind=dbl_kind), dimension (n_iso) :: &
          miso          ! isotope mass added to ocean (kg m-2)
 
@@ -232,12 +241,12 @@
       real (kind=dbl_kind), dimension (ncat) :: &
          hrmin      , & ! minimum ridge thickness
          hrmax      , & ! maximum ridge thickness (krdg_redist = 0)
-         hrexp      , & ! ridge e-folding thickness (krdg_redist = 1) 
+         hrexp      , & ! ridge e-folding thickness (krdg_redist = 1)
          krdg       , & ! mean ridge thickness/thickness of ridging ice
          ardg1n     , & ! area of ice ridged
          ardg2n     , & ! area of new ridges
          virdgn     , & ! ridging ice volume
-         mraftn         ! rafting ice mask 
+         mraftn         ! rafting ice mask
 
       real (kind=dbl_kind) :: &
          vice_init, vice_final, & ! ice volume summed over categories
@@ -274,6 +283,7 @@
       msnow_mlt = c0
       esnow_mlt = c0
       maero (:) = c0
+      mmp   (:) = c0
       miso  (:) = c0
       mpond     = c0
       ardg1     = c0
@@ -315,7 +325,7 @@
       if (icepack_warnings_aborted(subname)) return
 
       !-----------------------------------------------------------------
-      ! Compute initial values of conserved quantities. 
+      ! Compute initial values of conserved quantities.
       !-----------------------------------------------------------------
 
       if (conserv_check) then
@@ -359,7 +369,7 @@
                           vbrin, vbri_init)
          if (icepack_warnings_aborted(subname)) return
 
-      endif            
+      endif
 
       rdg_iteration: do niter = 1, nitermax
 
@@ -376,7 +386,7 @@
                          hrmin,       hrmax,      &
                          hrexp,       krdg,       &
                          aparticn,    krdgn,      &
-                         mraftn)    
+                         mraftn)
          if (icepack_warnings_aborted(subname)) return
 
       !-----------------------------------------------------------------
@@ -399,10 +409,12 @@
                            ardg1n,      ardg2n,      &
                            virdgn,                   &
                            nslyr,       n_aero,      &
+                           n_mp,                     &
                            msnow_mlt,   esnow_mlt,   &
-                           maero,       miso,        &
-                           mpond,       &
-                           aredistn,    vredistn)    
+                           maero,       mmp,         &
+                           miso,                     &
+                           mpond,                    &
+                           aredistn,    vredistn)
          if (icepack_warnings_aborted(subname)) return
 
       !-----------------------------------------------------------------
@@ -444,14 +456,14 @@
             write(warnstr,*) subname, 'max =',nitermax
             call icepack_warnings_add(warnstr)
             call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
-            call icepack_warnings_add(subname//" ridge_ice: Exceeded max number of ridging iterations" ) 
+            call icepack_warnings_add(subname//" ridge_ice: Exceeded max number of ridging iterations" )
             return
          endif
 
       enddo rdg_iteration                    ! niter
 
       !-----------------------------------------------------------------
-      ! Compute final values of conserved quantities. 
+      ! Compute final values of conserved quantities.
       ! Check for conservation (allowing for snow thrown into ocean).
       !-----------------------------------------------------------------
 
@@ -530,7 +542,7 @@
                                          puny*c10)
          if (icepack_warnings_aborted(subname)) return
 
-      endif                     ! conserv_check            
+      endif                     ! conserv_check
 
       !-----------------------------------------------------------------
       ! Compute ridging diagnostics.
@@ -595,6 +607,11 @@
             faero_ocn(it) = faero_ocn(it) + maero(it)*dti
          enddo
       endif
+      if (present(fmp_ocn)) then
+         do it = 1, n_mp
+            fmp_ocn(it) = fmp_ocn(it) + mmp(it)*dti
+         enddo
+      endif
       if (tr_iso) then
          ! check size fiso_ocn vs n_iso ???
          do it = 1, n_iso
@@ -611,7 +628,7 @@
 
       if (abs(asum - c1) > puny) then
          call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
-         call icepack_warnings_add(subname//" total area > 1" ) 
+         call icepack_warnings_add(subname//" total area > 1" )
 
          write(warnstr,*) ' '
          call icepack_warnings_add(warnstr)
@@ -644,7 +661,7 @@
 
       subroutine asum_ridging (ncat, aicen, aice0, asum)
 
-      integer (kind=int_kind), intent(in) :: & 
+      integer (kind=int_kind), intent(in) :: &
          ncat        ! number of thickness categories
 
       real (kind=dbl_kind), dimension (:), intent(in) :: &
@@ -681,7 +698,7 @@
                              asum,       closing_net,     &
                              divu_adv,   opning)
 
-      integer (kind=int_kind), intent(in) :: & 
+      integer (kind=int_kind), intent(in) :: &
          ncat        ! number of thickness categories
 
       real (kind=dbl_kind), intent(in) :: &
@@ -733,7 +750,7 @@
       !  water closing and thin ice ridging) without the third term
       !  (thick, newly ridged ice).
       !
-      ! rdg_conv is calculated differently in EAP (update_ice_rdg) and 
+      ! rdg_conv is calculated differently in EAP (update_ice_rdg) and
       ! represents closing_net directly.  In that case, rdg_shear=0.
       !-----------------------------------------------------------------
 
@@ -770,13 +787,13 @@
 !  redistribution.
 ! The new participation scheme (krdg_partic = 1) improves stability
 !  by increasing the time scale for large changes in ice strength.
-! The new exponential redistribution function (krdg_redist = 1) improves 
-!  agreement between ITDs of modeled and observed ridges.   
+! The new exponential redistribution function (krdg_redist = 1) improves
+!  agreement between ITDs of modeled and observed ridges.
 !
 ! author: William H. Lipscomb, LANL
 !
 ! 2006: Changed subroutine name to ridge_itd
-!       Added new options for ridging participation and redistribution.  
+!       Added new options for ridging participation and redistribution.
 
       subroutine ridge_itd (ncat,        aice0,           &
                             aicen,       vicen,           &
@@ -788,11 +805,11 @@
                             aparticn,    krdgn,           &
                             mraft)
 
-      integer (kind=int_kind), intent(in) :: & 
+      integer (kind=int_kind), intent(in) :: &
          ncat        ! number of thickness categories
 
       real (kind=dbl_kind), intent(in) :: &
-         mu_rdg , & ! gives e-folding scale of ridged ice (m^.5) 
+         mu_rdg , & ! gives e-folding scale of ridged ice (m^.5)
          aice0       ! concentration of open water
 
       real (kind=dbl_kind), dimension (:), intent(in) :: &
@@ -813,7 +830,7 @@
       real (kind=dbl_kind), dimension (:), intent(out) :: &
          hrmin   , & ! minimum ridge thickness
          hrmax   , & ! maximum ridge thickness (krdg_redist = 0)
-         hrexp   , & ! ridge e-folding thickness (krdg_redist = 1) 
+         hrexp   , & ! ridge e-folding thickness (krdg_redist = 1)
          krdg        ! mean ridge thickness/thickness of ridging ice
 
       ! diagnostic, category values
@@ -822,7 +839,7 @@
          krdgn       ! mean ridge thickness/thickness of ridging ice
 
       real (kind=dbl_kind), dimension (:), intent(inout), optional :: &
-         mraft       ! rafting ice mask 
+         mraft       ! rafting ice mask
 
       ! local variables
 
@@ -925,7 +942,7 @@
 
       !-----------------------------------------------------------------
       ! b(h) = exp(-G(h)/astar)
-      ! apartic(n) = [exp(-G(n-1)/astar - exp(-G(n)/astar] / [1-exp(-1/astar)]. 
+      ! apartic(n) = [exp(-G(n-1)/astar - exp(-G(n)/astar] / [1-exp(-1/astar)].
       ! The expression for apartic is found by integrating b(h)g(h)
       ! between the category boundaries.
       !-----------------------------------------------------------------
@@ -942,7 +959,7 @@
 
       !-----------------------------------------------------------------
       ! Compute variables related to ITD of ridged ice:
-      ! 
+      !
       ! krdg   = mean ridge thickness / thickness of ridging ice
       ! hrmin  = min ridge thickness
       ! hrmax  = max ridge thickness (krdg_redist = 0)
@@ -952,40 +969,40 @@
       if (krdg_redist == 0) then  ! Hibler 1980 formulation
 
       !-----------------------------------------------------------------
-      ! Assume ridged ice is uniformly distributed between hrmin and hrmax. 
-      ! 
-      ! This parameterization is a modified version of Hibler (1980). 
-      ! In the original paper the min ridging thickness is hrmin = 2*hi, 
-      !  and the max thickness is hrmax = 2*sqrt(hi*Hstar). 
-      ! 
-      ! Here the min thickness is hrmin = min(2*hi, hi+maxraft), 
-      !  so thick ridging ice is not required to raft. 
+      ! Assume ridged ice is uniformly distributed between hrmin and hrmax.
+      !
+      ! This parameterization is a modified version of Hibler (1980).
+      ! In the original paper the min ridging thickness is hrmin = 2*hi,
+      !  and the max thickness is hrmax = 2*sqrt(hi*Hstar).
+      !
+      ! Here the min thickness is hrmin = min(2*hi, hi+maxraft),
+      !  so thick ridging ice is not required to raft.
       !
       !-----------------------------------------------------------------
 
          do n = 1, ncat
-            if (aicen(n) > puny) then 
-               hi = vicen(n) / aicen(n) 
-               hrmin(n) = min(c2*hi, hi + maxraft) 
-               hrmax(n) = c2*sqrt(Hstar*hi) 
-               hrmax(n) = max(hrmax(n), hrmin(n)+puny) 
-               hrmean = p5 * (hrmin(n) + hrmax(n)) 
-               krdg(n) = hrmean / hi 
+            if (aicen(n) > puny) then
+               hi = vicen(n) / aicen(n)
+               hrmin(n) = min(c2*hi, hi + maxraft)
+               hrmax(n) = c2*sqrt(Hstar*hi)
+               hrmax(n) = max(hrmax(n), hrmin(n)+puny)
+               hrmean = p5 * (hrmin(n) + hrmax(n))
+               krdg(n) = hrmean / hi
 
                ! diagnostic rafting mask not implemented
-            endif 
+            endif
          enddo                  ! n
 
       else               ! krdg_redist = 1; exponential redistribution
- 
-      !----------------------------------------------------------------- 
-      ! The ridge ITD is a negative exponential: 
-      ! 
-      !  g(h) ~ exp[-(h-hrmin)/hrexp], h >= hrmin 
-      ! 
-      ! where hrmin is the minimum thickness of ridging ice and 
+
+      !-----------------------------------------------------------------
+      ! The ridge ITD is a negative exponential:
+      !
+      !  g(h) ~ exp[-(h-hrmin)/hrexp], h >= hrmin
+      !
+      ! where hrmin is the minimum thickness of ridging ice and
       ! hrexp is the e-folding thickness.
-      ! 
+      !
       ! Here, assume as above that hrmin = min(2*hi, hi+maxraft).
       ! That is, the minimum ridge thickness results from rafting,
       !  unless the ice is thicker than maxraft.
@@ -1004,7 +1021,7 @@
       !     50        4.0
       !     75        5.0
       !    100        6.0
-      !----------------------------------------------------------------- 
+      !-----------------------------------------------------------------
 
          do n = 1, ncat
             if (aicen(n) > puny) then
@@ -1031,13 +1048,13 @@
       ! For instance, if a unit area of ice with h = 1 participates in
       !  ridging to form a ridge with a = 1/3 and h = 3, then
       !  aksum = 1 - 1/3 = 2/3.
-      !---------------------------------------------------------------- 
+      !----------------------------------------------------------------
 
       aksum = apartic(0) ! area participating = area removed
 
       do n = 1, ncat
          ! area participating > area removed
-         aksum = aksum + apartic(n) * (c1 - c1/krdg(n)) 
+         aksum = aksum + apartic(n) * (c1 - c1/krdg(n))
       enddo
 
       ! diagnostics
@@ -1060,13 +1077,13 @@
 ! and add to thicker ice categories.
 !
 ! Tracers:  Ridging conserves ice volume and therefore conserves volume
-! tracers. It does not conserve ice area, and therefore a portion of area 
-! tracers are lost (corresponding to the net closing).  Area tracers on 
+! tracers. It does not conserve ice area, and therefore a portion of area
+! tracers are lost (corresponding to the net closing).  Area tracers on
 ! ice that participates in ridging are carried onto the resulting ridged
-! ice (except the portion that are lost due to closing).  Therefore, 
+! ice (except the portion that are lost due to closing).  Therefore,
 ! tracers must be decremented if they are lost to the ocean during ridging
-! (e.g. snow, ponds) or if they are being carried only on the level ice 
-! area. 
+! (e.g. snow, ponds) or if they are being carried only on the level ice
+! area.
 !
 ! author: William H. Lipscomb, LANL
 
@@ -1074,7 +1091,7 @@
                               ncat,        hin_max,         &
                               aicen,       trcrn,           &
                               vicen,       vsnon,           &
-                              aice0,       trcr_depend,     &   
+                              aice0,       trcr_depend,     &
                               trcr_base,   n_trcr_strata,   &
                               nt_strata,   krdg_redist,     &
                               aksum,       apartic,         &
@@ -1086,16 +1103,19 @@
                               ardg1nn,     ardg2nn,         &
                               virdgnn,                      &
                               nslyr,       n_aero,          &
+                              n_mp,                         &
                               msnow_mlt,   esnow_mlt,       &
-                              maero,       miso,            &
+                              maero,       mmp,             &
+                              miso,            &
                               mpond,           &
                               aredistn,    vredistn)
 
-      integer (kind=int_kind), intent(in) :: & 
+      integer (kind=int_kind), intent(in) :: &
          ncat  , & ! number of thickness categories
          nslyr , & ! number of snow layers
          ntrcr , & ! number of tracers in use
          n_aero, & ! number of aerosol tracers
+         n_mp  , & ! number of microplastics tracers
          krdg_redist      ! selects redistribution function
 
       real (kind=dbl_kind), intent(in) :: &
@@ -1136,7 +1156,7 @@
       real (kind=dbl_kind), dimension (:), intent(in) :: &
          hrmin      , & ! minimum ridge thickness
          hrmax      , & ! maximum ridge thickness (krdg_redist = 0)
-         hrexp      , & ! ridge e-folding thickness (krdg_redist = 1) 
+         hrexp      , & ! ridge e-folding thickness (krdg_redist = 1)
          krdg           ! mean ridge thickness/thickness of ridging ice
 
       real (kind=dbl_kind), intent(inout) :: &
@@ -1159,6 +1179,9 @@
 
       real (kind=dbl_kind), dimension(:), intent(inout) :: &
          maero          ! aerosol mass added to ocean (kg m-2)
+
+      real (kind=dbl_kind), dimension(:), intent(inout) :: &
+         mmp            ! microplastics mass added to ocean (kg m-2)
 
       real (kind=dbl_kind), dimension(:), intent(inout) :: &
          miso           ! isotope mass added to ocean (kg m-2)
@@ -1200,7 +1223,7 @@
          ardg1n     , & ! area of ice ridged
          ardg2n     , & ! area of new ridges
          virdgn     , & ! ridging ice volume
-         vsrdgn     , & ! ridging snow volume 
+         vsrdgn     , & ! ridging snow volume
          dhr        , & ! hrmax - hrmin
          dhr2       , & ! hrmax^2 - hrmin^2
          farea      , & ! fraction of new ridge area going to nr
@@ -1320,7 +1343,7 @@
       !-----------------------------------------------------------------
       ! Compute area of ridging ice (ardg1n) and of new ridge (ardg2n).
       ! Make sure ridging fraction <=1.  (Roundoff errors can give
-      !  ardg1 slightly greater than aicen.) 
+      !  ardg1 slightly greater than aicen.)
       !-----------------------------------------------------------------
 
             ardg1n = apartic(n)*closing_gross*dt
@@ -1348,7 +1371,7 @@
             vsrdgn = vsnon_init(n) * afrac
 
             aicen(n) = aicen(n) - ardg1n
-            vicen(n) = vicen(n) - virdgn           
+            vicen(n) = vicen(n) - virdgn
             vsnon(n) = vsnon(n) - vsrdgn
 
       !-----------------------------------------------------------------
@@ -1375,6 +1398,15 @@
                             + vsrdgn*(c1-fsnowrdg) &
                             *(trcrn(nt_aero  +4*(it-1),n)   &
                             + trcrn(nt_aero+1+4*(it-1),n))
+               enddo
+            endif
+
+            if (tr_mp) then
+               do it = 1, n_mp
+                  mmp(it) = mmp(it) &
+                            + vsrdgn*(c1-fsnowrdg) &
+                            *(trcrn(nt_mp  +4*(it-1),n)   &
+                            + trcrn(nt_mp+1+4*(it-1),n))
                enddo
             endif
 
@@ -1521,7 +1553,7 @@
 
       !-----------------------------------------------------------------
       ! Transfer area-weighted and volume-weighted tracers to category nr.
-      ! Note: The global sum aicen*trcrn of ice area tracers 
+      ! Note: The global sum aicen*trcrn of ice area tracers
       !       (trcr_depend = 0) is not conserved by ridging.
       !       However, ridging conserves the global sum of volume
       !       tracers (trcr_depend = 1 or 2).
@@ -1603,7 +1635,7 @@
                                       vicen,    &
                                       strength)
 
-      integer (kind=int_kind), intent(in) :: & 
+      integer (kind=int_kind), intent(in) :: &
          ncat       ! number of thickness categories
 
       real (kind=dbl_kind), intent(in) :: &
@@ -1633,7 +1665,7 @@
       real (kind=dbl_kind), dimension (ncat) :: &
          hrmin  , & ! minimum ridge thickness
          hrmax  , & ! maximum ridge thickness (krdg_redist = 0)
-         hrexp  , & ! ridge e-folding thickness (krdg_redist = 1) 
+         hrexp  , & ! ridge e-folding thickness (krdg_redist = 1)
          krdg       ! mean ridge thickness/thickness of ridging ice
 
       integer (kind=int_kind) :: &
@@ -1643,7 +1675,7 @@
          hi     , & ! ice thickness (m)
          h2rdg  , & ! mean value of h^2 for new ridge
          dh2rdg     ! change in mean value of h^2 per unit area
-                    ! consumed by ridging 
+                    ! consumed by ridging
 
       character(len=*),parameter :: subname='(icepack_ice_strength)'
 
@@ -1662,7 +1694,7 @@
                          mu_rdg,                   &
                          aksum,    apartic,    &
                          hrmin,    hrmax,      &
-                         hrexp,    krdg)   
+                         hrexp,    krdg)
          if (icepack_warnings_aborted(subname)) return
 
       !-----------------------------------------------------------------
@@ -1676,7 +1708,7 @@
                if (aicen(n) > puny .and. apartic(n) > c0)then
                   hi = vicen(n) / aicen(n)
                   h2rdg = p333 * (hrmax(n)**3 - hrmin(n)**3)  &
-                               / (hrmax(n) - hrmin(n)) 
+                               / (hrmax(n) - hrmin(n))
                   dh2rdg = -hi*hi + h2rdg/krdg(n)
                   strength = strength + apartic(n) * dh2rdg
                endif         ! aicen > puny
@@ -1735,8 +1767,9 @@
                                     dvirdgdt,     opening,       &
                                     fpond,                       &
                                     fresh,        fhocn,         &
-                                    n_aero,                      &
-                                    faero_ocn,    fiso_ocn,      &
+                                    n_aero,       n_mp,          &
+                                    faero_ocn,    fmp_ocn,       &
+                                    fiso_ocn,                    &
                                     aparticn,     krdgn,         &
                                     aredistn,     vredistn,      &
                                     dardg1ndt,    dardg2ndt,     &
@@ -1755,7 +1788,9 @@
          nblyr , & ! number of bio layers
          nilyr , & ! number of ice layers
          nslyr , & ! number of snow layers
-         n_aero    ! number of aerosol tracers
+         n_aero, & ! number of aerosol tracers
+         n_mp      ! number of aerosol tracers
+
 
       real (kind=dbl_kind), dimension(0:ncat), intent(inout) :: &
          hin_max   ! category limits (m)
@@ -1799,10 +1834,11 @@
          aparticn , & ! participation function
          krdgn    , & ! mean ridge thickness/thickness of ridging ice
          araftn   , & ! rafting ice area
-         vraftn   , & ! rafting ice volume 
+         vraftn   , & ! rafting ice volume
          aredistn , & ! redistribution function: fraction of new ridge area
          vredistn , & ! redistribution function: fraction of new ridge volume
          faero_ocn, & ! aerosol flux to ocean  (kg/m^2/s)
+         fmp_ocn  , & ! microplastics flux to ocean  (kg/m^2/s)
          flux_bio     ! all bio fluxes to ocean
 
       real (kind=dbl_kind), dimension(:), optional, intent(inout) :: &
@@ -1814,6 +1850,7 @@
       !logical (kind=log_kind), intent(in) :: &
          !tr_pond_topo,& ! if .true., use explicit topography-based ponds
          !tr_aero     ,& ! if .true., use aerosol tracers
+         !tr_mp       ,& ! if .true., use microplastics tracers
          !tr_brine    !,& ! if .true., brine height differs from ice thickness
          !heat_capacity  ! if true, ice has nonzero heat capacity
 
@@ -1864,6 +1901,7 @@
 
       call ridge_ice (dt,           ndtd,           &
                       ncat,         n_aero,         &
+                      n_mp,                         &
                       nilyr,        nslyr,          &
                       ntrcr,        hin_max,        &
                       rdg_conv,     rdg_shear,      &
@@ -1881,7 +1919,8 @@
                       dvirdgdt,     opening,        &
                       fpond,                        &
                       fresh,        fhocn,          &
-                      faero_ocn,    l_fiso_ocn,     &
+                      faero_ocn,    fmp_ocn,        &
+                      l_fiso_ocn,                   &
                       aparticn,     krdgn,          &
                       aredistn,     vredistn,       &
                       dardg1ndt,    dardg2ndt,      &
@@ -1902,17 +1941,18 @@
                         ncat,                 hin_max,          &
                         aicen,                trcrn,            &
                         vicen,                vsnon,            &
-                        aice0,                aice,             &          
-                        n_aero,                                 &
+                        aice0,                aice,             &
+                        n_aero,               n_mp,             &
                         nbtrcr,               nblyr,            &
-                        tr_aero,                                &
-                        tr_pond_topo,         heat_capacity,    &  
-                        first_ice,                              &                
+                        tr_aero,              tr_mp,            &
+                        tr_pond_topo,         heat_capacity,    &
+                        first_ice,                              &
                         trcr_depend,          trcr_base,        &
                         n_trcr_strata,        nt_strata,        &
                         fpond,                fresh,            &
                         fsalt,                fhocn,            &
-                        faero_ocn,            l_fiso_ocn,       &
+                        faero_ocn,            fmp_ocn,          &
+                        l_fiso_ocn,       &
                         fzsal,            &
                         flux_bio)
       if (icepack_warnings_aborted(subname)) return
