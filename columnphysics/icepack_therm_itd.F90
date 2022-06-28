@@ -2296,16 +2296,17 @@ call cleanup_itd (dt,                   ntrcr,            &
                   aicen,                trcrn(1:ntrcr,:), &
                   vicen,                vsnon,            &
                   aice0,                aice,             &
-                  n_aero,                                 &
+                  n_aero,               n_mp,             &
                   nbtrcr,               nblyr,            &
-                  tr_aero,                                &
+                  tr_aero,              tr_mp,            &
                   tr_pond_topo,         heat_capacity,    &
                   first_ice,                              &
                   trcr_depend,          trcr_base,        &
                   n_trcr_strata,        nt_strata,        &
                   fpond,                fresh,            &
                   fsalt,                fhocn,            &
-                  faero_ocn,            l_fiso_ocn,       &
+                  faero_ocn,            fmp_ocn,          &
+                  l_fiso_ocn,                             &
                   fzsal,                flux_bio)
 if (icepack_warnings_aborted(subname)) return
 

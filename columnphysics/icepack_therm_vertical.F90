@@ -2133,6 +2133,7 @@
                                     ipnd        ,               &
                                     iage        , FY          , &
                                     aerosno     , aeroice     , &
+                                    mpsno       , mpice       , &
                                     isosno      , isoice      , &
                                     uatm        , vatm        , &
                                     wind        , zlvl        , &
@@ -2385,6 +2386,10 @@
       real (kind=dbl_kind), dimension(:,:,:), intent(inout) :: &
          aerosno    , &  ! snow aerosol tracer (kg/m^2)
          aeroice         ! ice aerosol tracer (kg/m^2)
+
+      real (kind=dbl_kind), dimension(:,:,:), intent(inout) :: &
+          mpsno    , &  ! snow microplastics tracer (kg/m^2)
+          mpice         ! ice microplastics tracer (kg/m^2)
 
       real (kind=dbl_kind), dimension(:,:), optional, intent(inout) :: &
          isosno     , &  ! snow isotope tracer (kg/m^2)
