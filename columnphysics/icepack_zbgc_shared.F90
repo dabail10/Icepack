@@ -84,8 +84,8 @@
                         0.03_dbl_kind, 0.03_dbl_kind, 0.03_dbl_kind, &
                         0.03_dbl_kind, 0.03_dbl_kind, 0.03_dbl_kind, &
                         0.03_dbl_kind, 0.03_dbl_kind, 0.03_dbl_kind, &
-                        0.03_dbl_kind, 0.03_dbl_kind, 0.03_dbl_kind, & !AJ No idea what I am doing here
-                        0.03_dbl_kind, 0.03_dbl_kind, 0.03_dbl_kind, & !AJ No idea what I am doing here
+                        0.03_dbl_kind, 0.03_dbl_kind, 0.03_dbl_kind, & !AJ Added these two rows for adding MP tracers (6 max).
+                        0.03_dbl_kind, 0.03_dbl_kind, 0.03_dbl_kind, & !AJ But not clear where they should be in the kscvz matrix
                         0.03_dbl_kind, &
                         0.03_dbl_kind, 0.20_dbl_kind, 0.02_dbl_kind, &
                         0.02_dbl_kind, 0.01_dbl_kind, 0.01_dbl_kind, &

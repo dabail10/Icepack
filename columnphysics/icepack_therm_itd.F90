@@ -1202,6 +1202,7 @@ if (flag) then ! grid cells with lateral melting.
          enddo ! k
       endif    ! tr_aero
 
+      !AJ: Correct?
       if (tr_mp) then
          do k = 1, n_mp
             fmp_ocn(k) = fmp_ocn(k) + (vsnon(n) &

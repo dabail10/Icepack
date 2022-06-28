@@ -1170,6 +1170,7 @@
                enddo
             endif
 
+            !AJ: Is this correct? What are the +2/3+4 about?
             if (tr_mp) then
                do it = 1, n_mp
                   xtmp = (vicen(n)*(trcrn(nt_mp+2+4*(it-1),n)     &
@@ -1313,6 +1314,7 @@
                enddo               ! it
             endif
 
+            !AJ: Correct?
             if (tr_mp) then
                do it = 1, n_mp
                   xtmp = (vsnon(n)*(trcrn(nt_mp  +4*(it-1),n)     &
@@ -1470,7 +1472,7 @@
          enddo                 ! it
       endif ! tr_aero
 
-      ! mircoplastics
+      ! mircoplastics !AJ: Correct?
       if (tr_mp) then
          do it = 1, n_mp
             xtmp = (vsnon*(trcrn(nt_mp  +4*(it-1))     &

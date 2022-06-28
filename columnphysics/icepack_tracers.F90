@@ -244,7 +244,7 @@
              tr_mp_in        , & ! if .true., use microplastics tracers
              tr_brine_in     , & ! if .true., brine height differs from ice thickness
              tr_zaero_in     , & ! if .true., black carbon is tracers  (n_zaero)
-             tr_zmp_in       , & ! if .true., microplastic is tracers  (n_zmp)
+             tr_zmp_in       , & ! if .true., z microplastic tracers  (n_zmp)
              tr_bgc_Nit_in   , & ! if .true., Nitrate tracer in ice
              tr_bgc_N_in     , & ! if .true., algal nitrogen tracers  (n_algae)
              tr_bgc_DON_in   , & ! if .true., DON pools are tracers  (n_don)
@@ -448,7 +448,7 @@
              nt_isosno_in,  & ! starting index for isotopes in snow
              nt_isoice_in,  & ! starting index for isotopes in ice
              nt_aero_in,    & ! starting index for aerosols in ice
-             nt_mp_in,      & ! starting index for aerosols in ice
+             nt_mp_in,      & ! starting index for microplastics in ice
              nt_bgc_Nit_in, & ! nutrients
              nt_bgc_Am_in,  & !
              nt_bgc_Sil_in, & !

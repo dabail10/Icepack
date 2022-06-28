@@ -28,9 +28,9 @@
       use icepack_parameters, only: rfracmin, rfracmax, dpscale, frzpnd, snwgrain, snwlvlfac
       use icepack_parameters, only: phi_i_mushy, floeshape, floediam, use_smliq_pnd, snwredist
 
-      use icepack_tracers, only: tr_iage, tr_FY, tr_aero, tr_pond, tr_fsd, tr_iso
+      use icepack_tracers, only: tr_iage, tr_FY, tr_aero, tr_mp, tr_pond, tr_fsd, tr_iso
       use icepack_tracers, only: tr_pond_cesm, tr_pond_lvl, tr_pond_topo
-      use icepack_tracers, only: n_aero, n_iso
+      use icepack_tracers, only: n_aero, n_mp, n_iso
 
       use icepack_therm_shared, only: ferrmax, l_brine
       use icepack_therm_shared, only: calculate_tin_from_qin, Tmin
@@ -2360,7 +2360,7 @@
          faero_atm   , & ! aerosol deposition rate (kg/m^2 s)
          faero_ocn   , & ! aerosol flux to ocean  (kg/m^2/s)
          fmp_atm     , & ! microplastic deposition rate (kg/m^2 s)
-         fmp_ocn     , & ! microplastic flux to/from ocean  (kg/m^2/s)
+         fmp_ocn     , & ! microplastic flux to ocean  (kg/m^2/s)
          dhsn        , & ! depth difference for snow on sea ice and pond ice
          ffracn      , & ! fraction of fsurfn used to melt ipond
          meltsn      , & ! snow melt                       (m)
@@ -2840,7 +2840,12 @@
                if (icepack_warnings_aborted(subname)) return
             endif
 
-            ! NEED MICROPLASTICS CALL HERE ONCE CODE WRITTEN
+            ! AJ: NEED MICROPLASTICS CALL HERE ONCE CODE WRITTEN
+            if (tr_mp) then
+              ! call update_microplastic()
+              ! if (icepack_warnings_aborted(subname)) return
+            endif
+
 
             if (tr_iso) then
                call update_isotope (dt = dt, &
