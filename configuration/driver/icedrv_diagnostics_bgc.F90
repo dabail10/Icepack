@@ -15,7 +15,7 @@
       use icepack_intfc, only: icepack_query_parameters
       use icepack_intfc, only: icepack_query_tracer_flags, icepack_query_tracer_indices
       use icepack_intfc, only: icepack_max_algae, icepack_max_aero, icepack_max_fe
-      use icepack_intfc, only: icepack_max_doc, icepack_max_don
+      use icepack_intfc, only: icepack_max_doc, icepack_max_don, icepack_max_mp
       use icedrv_system, only: icedrv_system_abort
 
       implicit none
@@ -34,10 +34,10 @@
 ! authors: Nicole Jeffery, LANL
 
       subroutine hbrine_diags ()
-              
+
       use icedrv_arrays_column, only: darcy_V
       use icedrv_diagnostics, only: nx_names
-      use icedrv_domain_size, only: nilyr
+      use icedrv_domain_size, only: nilyr, n_zmp
       use icedrv_state, only: aice, aicen, vicen, vice, trcr, trcrn
 
       ! local variables
@@ -93,13 +93,13 @@
       !-----------------------------------------------------------------
 
          write(nu_diag_out+n-1,899) nx_names(n)
-        
+
          write(nu_diag_out+n-1,*) '------ hbrine ------'
          write(nu_diag_out+n-1,900) 'hbrine, (m)        = ',phinS
          write(nu_diag_out+n-1,900) 'fbri, cat1 (m)     = ',pfbri
          write(nu_diag_out+n-1,900) 'hbrine cat1, (m)   = ',phinS1
          write(nu_diag_out+n-1,900) 'darcy_V cat1, (m/s)= ',pdarcy_V
-         if (ktherm == 2) then          
+         if (ktherm == 2) then
             write(nu_diag_out+n-1,*) '                         '
             write(nu_diag_out+n-1,*) '------ Thermosaline Salinity ------'
             write(nu_diag_out+n-1,803) 'Sice1 cat1 S (ppt)'
@@ -130,7 +130,7 @@
 
       use icedrv_arrays_column, only: ocean_bio, zfswin, fbio_atmice, fbio_snoice
       use icedrv_arrays_column, only: Zoo, grow_net, ice_bio_net, trcrn_sw
-      use icedrv_domain_size,   only: ncat, nblyr, n_algae, n_zaero
+      use icedrv_domain_size,   only: ncat, nblyr, n_algae, n_zaero, n_zmp
       use icedrv_domain_size,   only: n_doc, n_don, n_fed, n_fep, nilyr, nslyr
       use icedrv_flux,  only: flux_bio, flux_bio_atm
       use icedrv_state, only: vicen, vice, trcr
@@ -155,7 +155,7 @@
 
       logical (kind=log_kind) :: &
          tr_bgc_DMS, tr_bgc_PON, &
-         tr_bgc_N, tr_bgc_C, tr_bgc_DON, tr_zaero, tr_bgc_hum, &
+         tr_bgc_N, tr_bgc_C, tr_bgc_DON, tr_zaero, tr_zmp, tr_bgc_hum, &
          tr_bgc_Nit, tr_bgc_Am, tr_bgc_Sil, tr_bgc_Fe
 
       integer (kind=int_kind) :: &
@@ -168,9 +168,11 @@
       integer (kind=int_kind), dimension(icepack_max_doc) :: &
          nt_bgc_doc, nlt_bgc_DOC
       integer (kind=int_kind), dimension(icepack_max_don) :: &
-         nt_bgc_don, nlt_bgc_DON 
+         nt_bgc_don, nlt_bgc_DON
       integer (kind=int_kind), dimension(icepack_max_aero) :: &
          nt_zaero, nlt_zaero, nlt_zaero_sw
+      integer (kind=int_kind), dimension(icepack_max_mp) :: &
+            nt_zmp, nlt_zmp, nlt_zmp_sw
       integer (kind=int_kind), dimension(icepack_max_fe) :: &
          nt_bgc_fed, nt_bgc_fep, nlt_bgc_Fed, nlt_bgc_Fep
 
@@ -181,10 +183,13 @@
       real (kind=dbl_kind), dimension(icepack_max_don) :: &
          pDON_ac, pDON_sk
       real (kind=dbl_kind), dimension(icepack_max_fe ) :: &
-         pFed_ac,  pFed_sk, pFep_ac, pFep_sk 
+         pFed_ac,  pFed_sk, pFep_ac, pFep_sk
       real (kind=dbl_kind), dimension(icepack_max_aero) :: &
         pflux_zaero, pflux_snow_zaero, pflux_atm_zaero, &
         pflux_atm_zaero_s
+      real (kind=dbl_kind), dimension(icepack_max_mp) :: &
+        pflux_zmp, pflux_snow_zmp, pflux_atm_zmp, &
+        pflux_atm_zmp_s
 
       ! vertical  fields of category 1 at diagnostic points for bgc layer model
       real (kind=dbl_kind), dimension(2) :: &
@@ -196,28 +201,33 @@
       real (kind=dbl_kind), dimension(2,icepack_max_don) :: &
          pDONs
       real (kind=dbl_kind), dimension(2,icepack_max_fe ) :: &
-         pFeds, pFeps 
+         pFeds, pFeps
       real (kind=dbl_kind), dimension(2,icepack_max_aero) :: &
          pzaeros
+      real (kind=dbl_kind), dimension(2,icepack_max_mp) :: &
+            pzmps
       real (kind=dbl_kind), dimension(nblyr+1) :: &
          pNO, pAm, pPON, pzfswin, pZoo, phum
       real (kind=dbl_kind), dimension(nblyr+1,icepack_max_algae) :: &
          pN
       real (kind=dbl_kind), dimension(nblyr+1,icepack_max_aero) :: &
          pzaero
+      real (kind=dbl_kind), dimension(nblyr+1,icepack_max_mp) :: &
+         pzmp
       real (kind=dbl_kind), dimension(nblyr+1,icepack_max_doc) :: &
          pDOC
       real (kind=dbl_kind), dimension(nblyr+1,icepack_max_don) :: &
          pDON
       real (kind=dbl_kind), dimension(nblyr+1,icepack_max_fe ) :: &
-         pFed, pFep 
-      real (kind=dbl_kind), dimension (nblyr+1) :: & 
+         pFed, pFep
+      real (kind=dbl_kind), dimension (nblyr+1) :: &
          zspace
       real (kind=dbl_kind), dimension (nslyr+nilyr+2) :: &
          pchlsw
       real (kind=dbl_kind), dimension(nslyr+nilyr+2,icepack_max_aero) :: &
          pzaerosw
-
+      real (kind=dbl_kind), dimension(nslyr+nilyr+2,icepack_max_mp) :: &
+         pzmpsw
       character(len=*), parameter :: subname='(bgc_diags)'
 
       !-----------------------------------------------------------------
@@ -229,13 +239,13 @@
       call icepack_query_tracer_flags( &
          tr_bgc_DMS_out=tr_bgc_DMS, tr_bgc_PON_out=tr_bgc_PON, &
          tr_bgc_N_out=tr_bgc_N, tr_bgc_C_out=tr_bgc_C, &
-         tr_bgc_DON_out=tr_bgc_DON, tr_zaero_out=tr_zaero, &
+         tr_bgc_DON_out=tr_bgc_DON, tr_zaero_out=tr_zaero, tr_zmp_out=tr_zmp, &
          tr_bgc_hum_out=tr_bgc_hum,tr_bgc_Sil_out=tr_bgc_Sil, &
          tr_bgc_Nit_out=tr_bgc_Nit, tr_bgc_Am_out=tr_bgc_Am, &
          tr_bgc_Fe_out=tr_bgc_Fe)
       call icepack_query_tracer_indices( &
          nt_fbri_out=nt_fbri, nt_sice_out=nt_sice, nt_zaero_out=nt_zaero, &
-         nt_bgc_n_out=nt_bgc_n, nt_bgc_doc_out=nt_bgc_doc, &
+         nt_zmp_out=nt_zmp, nt_bgc_n_out=nt_bgc_n, nt_bgc_doc_out=nt_bgc_doc, &
          nt_bgc_don_out=nt_bgc_don, nt_bgc_sil_out=nt_bgc_sil, &
          nt_bgc_fed_out=nt_bgc_fed, nt_bgc_fep_out=nt_bgc_fep, &
          nt_bgc_nit_out=nt_bgc_nit, nt_bgc_am_out=nt_bgc_am, &
@@ -243,7 +253,8 @@
          nt_bgc_dmspp_out=nt_bgc_dmspp, nt_bgc_dmspd_out=nt_bgc_dmspd, &
          nt_bgc_dms_out=nt_bgc_dms, nlt_chl_sw_out=nlt_chl_sw, &
          nlt_bgc_N_out=nlt_bgc_N, nlt_zaero_out=nlt_zaero, &
-         nlt_zaero_sw_out=nlt_zaero_sw, &
+         nlt_zaero_sw_out=nlt_zaero_sw,                    &
+         nlt_zmp_out=nlt_zmp, nlt_zmp_sw_out=nlt_zmp_sw,&
          nlt_bgc_Fed_out=nlt_bgc_Fed, nlt_bgc_Fep_out=nlt_bgc_Fep, &
          nlt_bgc_hum_out=nlt_bgc_hum, nlt_bgc_Nit_out=nlt_bgc_Nit, &
          nlt_bgc_Am_out=nlt_bgc_Am, nlt_bgc_Sil_out=nlt_bgc_Sil, &
@@ -288,15 +299,15 @@
             if (tr_bgc_DON) then
                do k = 1,n_don
                   pDON_ac(k)    = ocean_bio(n,nlt_bgc_DON(k))
-               enddo 
+               enddo
             endif
             if (tr_bgc_Fe ) then
-               do k = 1,n_fed 
+               do k = 1,n_fed
                   pFed_ac (k)   = ocean_bio(n,nlt_bgc_Fed (k))
-               enddo 
-               do k = 1,n_fep 
+               enddo
+               do k = 1,n_fep
                   pFep_ac (k)   = ocean_bio(n,nlt_bgc_Fep (k))
-               enddo 
+               enddo
             endif
             if (tr_bgc_Nit) pNit_ac  = ocean_bio(n,nlt_bgc_Nit)
             if (tr_bgc_Am)  pAm_ac   = ocean_bio(n,nlt_bgc_Am)
@@ -385,6 +396,10 @@
                pflux_atm_zaero_s(:) = c0
                pflux_atm_zaero  (:) = c0
                pflux_snow_zaero (:) = c0
+               pflux_zmp        (:) = c0
+               pflux_atm_zmp_s  (:) = c0
+               pflux_atm_zmp    (:) = c0
+               pflux_snow_zmp (:) = c0
 
                if (tr_bgc_Nit) then
                   pflux_NO       = flux_bio(n,nlt_bgc_Nit)*mps_to_cmpdy/c100
@@ -412,6 +427,14 @@
                      pflux_snow_zaero(k) = fbio_snoice(n,nlt_zaero(k))*mps_to_cmpdy/c100
                   enddo
                endif
+               if (tr_zmp)  then
+                  do k = 1,n_zmp
+                     pflux_zmp(k)      = flux_bio(n,nlt_zmp(k))*mps_to_cmpdy/c100
+                     pflux_atm_zmp_s(k)= flux_bio_atm(n,nlt_zmp(k))*mps_to_cmpdy/c100 !*aice
+                     pflux_atm_zmp(k)  = fbio_atmice(n,nlt_zmp(k))*mps_to_cmpdy/c100
+                     pflux_snow_zmp(k) = fbio_snoice(n,nlt_zmp(k))*mps_to_cmpdy/c100
+                  enddo
+               endif
                do k = 1, nblyr+1
                   pzfswin(k) = c0
                   pZoo   (k) = c0
@@ -430,6 +453,7 @@
                   pFed  (k,:) = c0
                   pFep  (k,:) = c0
                   pzaero(k,:) = c0
+                  pzmp  (k,:) = c0
                   pPON  (k  ) = c0
                   phum  (k  ) = c0
                   pNO   (k  ) = c0
@@ -463,6 +487,11 @@
                         pzaero(k,nn) = trcr(n,nt_zaero(nn)+k-1)
                      enddo
                   endif
+                  if (tr_zmp) then
+                     do nn = 1, n_zmp
+                        pzmp(k,nn) = trcr(n,nt_zmp(nn)+k-1)
+                     enddo
+                  endif
                   if (tr_bgc_PON) pPON(k) = trcr(n,nt_bgc_PON+k-1)
                   if (tr_bgc_hum) phum(k) = trcr(n,nt_bgc_hum+k-1)
                enddo  ! k
@@ -480,6 +509,7 @@
                   pFeds  (k,:)= c0
                   pFeps  (k,:)= c0
                   pzaeros(k,:) = c0
+                  pzmps(k,:) = c0
                   pPONs  (k  ) = c0
                   phums  (k  ) = c0
                   pNOs   (k  ) = c0
@@ -513,18 +543,29 @@
                         pzaeros(k,nn) = trcr(n,nt_zaero(nn)+nblyr+k)
                      enddo
                   endif
+                  if (tr_zmp) then
+                     do nn = 1, n_zmp
+                        pzmps(k,nn) = trcr(n,nt_zmp(nn)+nblyr+k)
+                     enddo
+                  endif
                   if (tr_bgc_PON)pPONs(k) =trcr(n,nt_bgc_PON+nblyr+k)
                   if (tr_bgc_hum)phums(k) =trcr(n,nt_bgc_hum+nblyr+k)
                enddo   ! k
             endif      ! ztracers
             pchlsw(:) = c0
             pzaerosw(:,:) = c0
+            pzmpsw(:,:) = c0
             if (dEdd_algae) then
                do k = 0, klev
                   if (tr_bgc_N) pchlsw(k+1) = trcrn_sw(n,nlt_chl_sw+k,1)
                   if (tr_zaero) then
                      do nn = 1,n_zaero
                         pzaerosw(k+1,nn) =  trcrn_sw(n,nlt_zaero_sw(nn) + k,1)
+                     enddo
+                  endif
+                  if (tr_zmp) then
+                     do nn = 1,n_zmp
+                        pzmpsw(k+1,nn) =  trcrn_sw(n,nlt_zmp_sw(nn) + k,1)
                      enddo
                   endif
                enddo
@@ -714,12 +755,35 @@
          write(nu_diag_out+n-1,*) '            '
        enddo
       endif
+      if (tr_zmp .and. z_tracers) then
+       do kk = 1,n_zmp
+         write(nu_diag_out+n-1,*) '---------------------------------------------------'
+         write(nu_diag_out+n-1,*) '  microplastics conc. (kg/m^3) or flux (kg/m^2/d)'
+         write(nu_diag_out+n-1,1020) '  type: ',kk
+         write(nu_diag_out+n-1,900) 'Atm source flux     = ',pflux_atm_zmp_s(kk)
+         write(nu_diag_out+n-1,900) 'ice-ocean flux*aice = ',pflux_zmp(kk)
+         write(nu_diag_out+n-1,900) 'atm-ice flux*aice   = ',pflux_atm_zmp(kk)
+         write(nu_diag_out+n-1,900) 'snow-ice flux*aice  = ',pflux_snow_zmp(kk)
+         write(nu_diag_out+n-1,*) '             snow + ice conc.'
+         write(nu_diag_out+n-1,803) ' microplastics'
+         write(nu_diag_out+n-1,802) (pzmps(k,kk), k = 1,2)
+         write(nu_diag_out+n-1,802) (pzmp(k,kk), k = 1,nblyr+1)
+         write(nu_diag_out+n-1,*) '            '
+       enddo
+      endif
       if (dEdd_algae) then
           if (tr_zaero) then
           do kk = 1,n_zaero
           write(nu_diag_out+n-1,*) '---------------------------------------------------'
           write(nu_diag_out+n-1,*) '  Cat 1 aerosol conc. (kg/m^3) on delta-Eddington grid  '
           write(nu_diag_out+n-1,802) (pzaerosw(k,kk), k = 1,klev +1)
+          enddo
+          endif
+          if (tr_zmp) then
+          do kk = 1,n_zmp
+          write(nu_diag_out+n-1,*) '---------------------------------------------------'
+          write(nu_diag_out+n-1,*) '  Cat 1 microplastics conc. (kg/m^3) on delta-Eddington grid  '
+          write(nu_diag_out+n-1,802) (pzmpsw(k,kk), k = 1,klev +1)
           enddo
           endif
          if (tr_bgc_N) then

@@ -130,6 +130,10 @@
          qdp     , & ! deep ocean heat flux (W/m^2), negative upward
          hmix        ! mixed layer depth (m)
 
+
+      real (kind=dbl_kind), dimension (nx, icepack_max_mp), public :: &
+         mp_ocn    ! seawater concentration of microplastics (kg/kg)
+
       ! water isotopes
       real (kind=dbl_kind), dimension (nx), public :: &
          HDO_ocn    , & ! seawater concentration of HDO (kg/kg)
@@ -296,8 +300,8 @@
          faero_atm   ! aerosol deposition rate (kg/m^2 s)
 
       real (kind=dbl_kind), &   ! coupling variable for both tr_mp and tr_zmp
-          dimension (nx,icepack_max_mp), public :: &
-          fmp_atm   ! atmospheric microplastic deposition rate (kg/m^2 s)
+            dimension (nx,icepack_max_mp), public :: &
+            fmp_atm   ! microplastics deposition rate (kg/m^2 s)
 
       real (kind=dbl_kind), &   ! coupling variable for tr_iso
          dimension (nx,icepack_max_iso), public :: &
@@ -320,7 +324,7 @@
 
       real (kind=dbl_kind), &
          dimension (nx,icepack_max_mp), public :: &
-         fmp_ocn   ! microplastic flux to/from ocean  (kg/m^2/s)
+         fmp_ocn   ! microplastics flux to ocean  (kg/m^2/s)
 
       real (kind=dbl_kind), &
          dimension (nx,icepack_max_iso), public :: &
@@ -382,8 +386,9 @@
       real (kind=dbl_kind), dimension (nx,icepack_max_aero), public :: &
          zaeros          ! ocean aerosols (mmol/m^3)
 
-      real (kind=dbl_kind), dimension (nx,icepack_max_aero), public :: &
-         zmps          ! ocean microplastics (mmol/m^3)
+      real (kind=dbl_kind), dimension (nx,icepack_max_mp), public :: &
+         zmps            ! ocean microplastics (mmol/m^3)
+
 
 !=======================================================================
 
@@ -512,6 +517,9 @@
       H2_16O_ocn(:) = c0
       H2_18O_ocn(:) = c0
 
+      ! microplastics from ocean
+      mp_ocn   (:,:) = c0
+
       do i = 1, nx
          Tf (i) = icepack_liquidus_temperature(sss(i)) ! freezing temp (C)
       enddo
@@ -629,7 +637,8 @@
       fswthru_idf  (:)   = c0
       fiso_ocn (:,:) = c0
       faero_ocn(:,:) = c0
-      fmp_ocn(:,:)   = c0
+      fmp_ocn  (:,:) = c0
+
 
       end subroutine init_flux_atm_ocn
 

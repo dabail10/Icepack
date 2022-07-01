@@ -10,7 +10,7 @@
       use icedrv_kinds
       use icedrv_domain_size, only: nx
       use icedrv_calendar, only: secday
-      use icedrv_constants, only: nu_forcing, nu_diag
+      use icedrv_constants, only: c0, nu_forcing, nu_diag
       use icepack_intfc, only: icepack_max_algae, icepack_max_doc
       use icepack_intfc, only: icepack_max_dic
       use icepack_intfc, only: icepack_query_tracer_flags
@@ -19,7 +19,7 @@
 
       implicit none
       private
-      public :: get_forcing_bgc, faero_default, fiso_default, init_forcing_bgc 
+      public :: get_forcing_bgc, faero_default, fiso_default, init_forcing_bgc, fmp_default
 
       real (kind=dbl_kind), dimension(365) :: & ! hardwired for now
          sil_data, nit_data
@@ -45,10 +45,10 @@
         character (char_len_long) filename
 
         character(len=*), parameter :: subname='(init_forcing_bgc)'
-        
+
         if (trim(bgc_data_type) == 'ISPOL' .or. &
             trim(bgc_data_type) == 'NICE') then
-          
+
            if (trim(bgc_data_type) == 'ISPOL') &
            filename = trim(data_dir)//'/ISPOL_2004/'//trim(bgc_data_file)
            if (trim(bgc_data_type) == 'NICE') &
@@ -71,7 +71,7 @@
         end if
 
       end subroutine init_forcing_bgc
-        
+
 !=======================================================================
 !
 ! Read and interpolate annual climatologies of silicate and nitrate.
@@ -112,18 +112,18 @@
           trim(bgc_data_type) == 'NICE') then
 
         dataloc = 2                          ! data located at end of interval
-        maxrec = 365                         ! 
-        
+        maxrec = 365                         !
+
         ! current record number
-        recnum = int(yday)   
-        
+        recnum = int(yday)
+
         ! Compute record numbers for surrounding data (2 on each side)
         ixm = mod(recnum+maxrec-2,maxrec) + 1
         ixx = mod(recnum-1,       maxrec) + 1
-        
+
         recslot = 2
         call interp_coeff (recnum, recslot, secday, dataloc, c1intp, c2intp)
-                 
+
         if (tr_bgc_Sil) then
            sil(:) =  c1intp * sil_data(ixm) + c2intp * sil_data(ixx)
         endif
@@ -146,25 +146,43 @@
       end subroutine get_forcing_bgc
 
 !=======================================================================
-
 ! constant values for atmospheric aerosols
 !
 ! authors: Elizabeth Hunke, LANL
 
       subroutine faero_default
-        
+
       use icedrv_flux, only: faero_atm
       character(len=*), parameter :: subname='(faero_default)'
-        
+
       faero_atm(:,1) = 1.e-12_dbl_kind ! kg/m^2 s
       faero_atm(:,2) = 1.e-13_dbl_kind
       faero_atm(:,3) = 1.e-14_dbl_kind
       faero_atm(:,4) = 1.e-14_dbl_kind
       faero_atm(:,5) = 1.e-14_dbl_kind
       faero_atm(:,6) = 1.e-14_dbl_kind
-        
+
       end subroutine faero_default
-      
+
+!=======================================================================
+! constant values for atmospheric microplastics
+!
+! authors: Alexandra Jahn, CU Boulder
+
+      subroutine fmp_default
+
+      use icedrv_flux, only: fmp_atm
+      character(len=*), parameter :: subname='(fmp_default)'
+
+      fmp_atm(:,1) = c0 ! kg/m^2 s
+      fmp_atm(:,2) = c0
+      fmp_atm(:,3) = c0
+      fmp_atm(:,4) = c0
+      fmp_atm(:,5) = c0
+      fmp_atm(:,6) = c0
+
+      end subroutine fmp_default
+
 !=======================================================================
 
 ! constant values for atmospheric water isotopes

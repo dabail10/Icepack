@@ -1311,7 +1311,7 @@ subroutine add_new_ice (ncat,      nilyr,      &
                         frazil_diag,           &
                         fiso_ocn,              &
                         HDO_ocn, H2_16O_ocn,   &
-                        H2_18O_ocn,            &
+                        H2_18O_ocn,  mp_ocn,    &
                         wave_sig_ht,           &
                         wave_spectrum,         &
                         wavefreq,              &
@@ -1401,7 +1401,9 @@ real (kind=dbl_kind),  intent(inout) :: &
 ! water isotopes
 
 real (kind=dbl_kind), dimension(:), intent(inout) :: &
+   mp_ocn     , & ! ocean concentration of micriplastics (kg/kg)
    fiso_ocn       ! isotope flux to ocean  (kg/m^2/s)
+
 
 real (kind=dbl_kind), intent(in) :: &
    HDO_ocn    , & ! ocean concentration of HDO (kg/kg)
@@ -1740,9 +1742,12 @@ if (hsurp > c0) then   ! add ice to all categories
          enddo
       endif
 
-      if (tr_mp .and. vtmp > puny) then
+      if (tr_mp .and. vtmp > puny) then !AJ: IS THIS CORRECT?
          do it = 1, n_mp
-            !AJ: NEED MP SPECIFIC CODE HERE
+            trcrn(nt_mp+2+4*(it-1),n) = &
+            trcrn(nt_mp+2+4*(it-1),n)*vicen(n) / vtmp
+            trcrn(nt_mp+3+4*(it-1),n) = &
+            trcrn(nt_mp+3+4*(it-1),n)*vicen(n) / vtmp
          enddo
       endif
 
@@ -1868,9 +1873,12 @@ if (d_an_tot(n) > c0 .and. vin0new(n) > c0) then  ! add ice to category n
          enddo
       endif
 
-      if (tr_mp) then
+      if (tr_mp) then !AJ: IS THIS CORRECT
          do it = 1, n_mp
-            !AJ: NEED MP SPECIFIC CODE HERE
+           trcrn(nt_mp+2+4*(it-1),n) = &
+           trcrn(nt_mp+2+4*(it-1),n)*vice1/vicen(n)
+           trcrn(nt_mp+3+4*(it-1),n) = &
+           trcrn(nt_mp+3+4*(it-1),n)*vice1/vicen(n)
          enddo
       endif
 
@@ -2137,6 +2145,9 @@ real (kind=dbl_kind) :: &
    l_H2_16O_ocn , & ! local ocean concentration of H2_16O (kg/kg)
    l_H2_18O_ocn     ! local ocean concentration of H2_18O (kg/kg)
 
+real (kind=dbl_kind), dimension(:), allocatable :: &
+   mp_ocn     ! microplastics ocean concentraion   (kg/kg)
+
 character(len=*),parameter :: subname='(icepack_step_therm2)'
 
 !-----------------------------------------------------------------
@@ -2156,6 +2167,7 @@ l_H2_18O_ocn = c0
 if (present(HDO_ocn)   ) l_HDO_ocn    = HDO_ocn
 if (present(H2_16O_ocn)) l_H2_16O_ocn = H2_16O_ocn
 if (present(H2_18O_ocn)) l_H2_18O_ocn = H2_18O_ocn
+
 
 !-----------------------------------------------------------------
 ! Let rain drain through to the ocean.
@@ -2235,7 +2247,7 @@ endif  ! kitd = 1
                      ocean_bio,     fzsal,        &
                      frazil_diag,   l_fiso_ocn,   &
                      l_HDO_ocn,     l_H2_16O_ocn, &
-                     l_H2_18O_ocn,                &
+                     l_H2_18O_ocn,  mp_ocn,       &
                      wave_sig_ht,                 &
                      wave_spectrum,               &
                      wavefreq,      dwavefreq,    &

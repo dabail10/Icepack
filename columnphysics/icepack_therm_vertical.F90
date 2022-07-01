@@ -49,6 +49,7 @@
 
       use icepack_aerosol, only: update_aerosol
       use icepack_isotope, only: update_isotope
+      use icepack_microplastics, only: update_microplastics
       use icepack_atmo, only: neutral_drag_coeffs, icepack_atm_boundary
       use icepack_age, only: increment_age
       use icepack_firstyear, only: update_FYarea
@@ -2191,10 +2192,11 @@
                                     fsurfn_f    , fcondtopn_f , &
                                     faero_atm   , faero_ocn   , &
                                     fmp_atm     , fmp_ocn     , &
+                                    mp_ocn      ,               &
                                     fiso_atm    , fiso_ocn    , &
                                     fiso_evap   , &
                                     HDO_ocn     , H2_16O_ocn  , &
-                                    H2_18O_ocn  ,  &
+                                    H2_18O_ocn  ,               &
                                     dhsn        , ffracn      , &
                                     meltt       , melttn      , &
                                     meltb       , meltbn      , &
@@ -2361,6 +2363,7 @@
          faero_ocn   , & ! aerosol flux to ocean  (kg/m^2/s)
          fmp_atm     , & ! microplastic deposition rate (kg/m^2 s)
          fmp_ocn     , & ! microplastic flux to ocean  (kg/m^2/s)
+         mp_ocn      , & ! ocean concentration of microplastics (kg/kg)
          dhsn        , & ! depth difference for snow on sea ice and pond ice
          ffracn      , & ! fraction of fsurfn used to melt ipond
          meltsn      , & ! snow melt                       (m)
@@ -2446,6 +2449,7 @@
          l_fiso_ocn  , & ! local isotope flux to ocean  (kg/m^2/s)
          l_fiso_evap , & ! local isotope evaporation (kg/m^2/s)
          l_meltsliqn     ! mass of snow melt (kg/m^2)
+
 
       real (kind=dbl_kind), allocatable, dimension(:,:) :: &
          l_rsnw      , & ! snow grain radius (10^-6 m)
@@ -2840,10 +2844,20 @@
                if (icepack_warnings_aborted(subname)) return
             endif
 
-            ! AJ: NEED MICROPLASTICS CALL HERE ONCE CODE WRITTEN
             if (tr_mp) then
-              ! call update_microplastic()
-              ! if (icepack_warnings_aborted(subname)) return
+               call update_microplastics (dt,                       &
+                                 nilyr, nslyr,                   &
+                                 n_mp,                           &
+                                 melttn     (n), meltsn     (n), &
+                                 meltbn     (n), congeln    (n), &
+                                 snoicen    (n), fsnow,          &
+                                 mpsno  (:,:,n), mpice(:,:,n),   &
+                                 aicen_init (n), vicen_init (n), &
+                                 vsnon_init (n),                 &
+                                 vicen      (n), vsnon      (n), &
+                                 aicen      (n),                 &
+                                 fmp_atm     ,  fmp_ocn, mp_ocn)
+                if (icepack_warnings_aborted(subname)) return
             endif
 
 

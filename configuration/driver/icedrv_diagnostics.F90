@@ -9,7 +9,7 @@
       use icedrv_kinds
       use icedrv_constants, only: nu_diag, nu_diag_out
       use icedrv_domain_size, only: nx
-      use icedrv_domain_size, only: ncat, nfsd, n_iso, nilyr, nslyr
+      use icedrv_domain_size, only: ncat, nfsd, n_iso, n_mp, nilyr, nslyr
       use icepack_intfc, only: c0
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
       use icepack_intfc, only: icepack_query_parameters
@@ -62,7 +62,7 @@
       use icedrv_arrays_column, only: floe_rad_c
       use icedrv_flux, only: evap, fsnow, frazil
       use icedrv_flux, only: fswabs, flw, flwout, fsens, fsurf, flat
-      use icedrv_flux, only: frain, fiso_evap, fiso_ocn, fiso_atm
+      use icedrv_flux, only: frain, fiso_evap, fiso_ocn, fiso_atm, fmp_ocn, fmp_atm
       use icedrv_flux, only: Tair, Qa, fsw, fcondtop
       use icedrv_flux, only: meltt, meltb, meltl, snoice
       use icedrv_flux, only: dsnow, congel, sst, sss, Tf, fhocn
@@ -83,7 +83,7 @@
          snwredist
 
       ! fields at diagnostic points
-      real (kind=dbl_kind) :: & 
+      real (kind=dbl_kind) :: &
          pTair, pfsnow, pfrain, &
          paice, hiavg, hsavg, hbravg, psalt, pTsfc, &
          pevap, pfhocn, fsdavg, &
@@ -95,8 +95,8 @@
       real (kind=dbl_kind) :: &
          Tffresh, rhos, rhow, rhoi
 
-      logical (kind=log_kind) :: tr_brine, tr_fsd, tr_iso, tr_snow
-      integer (kind=int_kind) :: nt_fbri, nt_Tsfc, nt_fsd, nt_isosno, nt_isoice
+      logical (kind=log_kind) :: tr_brine, tr_fsd, tr_iso, tr_mp, tr_snow
+      integer (kind=int_kind) :: nt_fbri, nt_Tsfc, nt_fsd, nt_isosno, nt_isoice, nt_mp
       integer (kind=int_kind) :: nt_rsnw, nt_rhos, nt_smice, nt_smliq
 
       character(len=*), parameter :: subname='(runtime_diags)'
@@ -108,9 +108,9 @@
       call icepack_query_parameters(calc_Tsfc_out=calc_Tsfc, &
            snwredist_out=snwredist, snwgrain_out=snwgrain)
       call icepack_query_tracer_flags(tr_brine_out=tr_brine, &
-           tr_fsd_out=tr_fsd,tr_iso_out=tr_iso,tr_snow_out=tr_snow)
+           tr_fsd_out=tr_fsd,tr_iso_out=tr_iso, tr_mp_out=tr_mp,tr_snow_out=tr_snow)
       call icepack_query_tracer_indices(nt_fbri_out=nt_fbri, nt_Tsfc_out=nt_Tsfc,&
-           nt_fsd_out=nt_fsd, nt_isosno_out=nt_isosno, nt_isoice_out=nt_isoice, &
+           nt_fsd_out=nt_fsd, nt_mp_out=nt_mp, nt_isosno_out=nt_isosno, nt_isoice_out=nt_isoice, &
            nt_rsnw_out=nt_rsnw, nt_rhos_out=nt_rhos, &
            nt_smice_out=nt_smice, nt_smliq_out=nt_smliq)
       call icepack_query_parameters(Tffresh_out=Tffresh, rhos_out=rhos, &
@@ -130,18 +130,18 @@
         pTair = Tair(n) - Tffresh ! air temperature
         pfsnow = fsnow(n)*dt/rhos ! snowfall
         pfrain = frain(n)*dt/rhow ! rainfall
-        
-        paice = aice(n)           ! ice area           
+
+        paice = aice(n)           ! ice area
         hiavg = c0                ! avg ice thickness
         hsavg = c0                ! avg snow thickness
-        fsdavg = c0               ! FSD rep radius 
+        fsdavg = c0               ! FSD rep radius
         hbravg = c0               ! avg brine thickness
         rsnwavg = c0              ! avg snow grain radius
         rhosavg = c0              ! avg snow density
         smicetot = c0             ! total mass of ice in snow (kg/m2)
         smliqtot = c0             ! total mass of liquid in snow (kg/m2)
         smtot = c0                ! total mass of snow volume (kg/m2)
-        psalt = c0 
+        psalt = c0
         if (paice /= c0) then
            hiavg = vice(n)/paice
            hsavg = vsno(n)/paice
@@ -181,7 +181,7 @@
         pdhs(n) = vsno(n) - pdhs(n)  ! snow thickness change
         pde(n) =-(work1(n)- pde(n))/dt ! ice/snow energy change
         pfhocn = -fhocn(n)        ! ocean heat used by ice
-        
+
         work3(:) = c0
 
         do k = 1, n_iso
@@ -193,9 +193,9 @@
         !-----------------------------------------------------------------
         ! start spewing
         !-----------------------------------------------------------------
-        
+
         write(nu_diag_out+n-1,899) nx_names(n)
-        
+
         write(nu_diag_out+n-1,*) '                         '
         write(nu_diag_out+n-1,*) '----------atm----------'
         write(nu_diag_out+n-1,900) 'air temperature (C)    = ',pTair
@@ -218,7 +218,7 @@
         write(nu_diag_out+n-1,900) 'avg brine thickness (m)= ',hbravg
         if (tr_fsd) &
         write(nu_diag_out+n-1,900) 'avg fsd rep radius (m) = ',fsdavg
-       
+
         if (calc_Tsfc) then
           write(nu_diag_out+n-1,900) 'surface temperature(C) = ',pTsfc ! ice/snow
           write(nu_diag_out+n-1,900) 'absorbed shortwave flx = ',fswabs(n)
@@ -257,7 +257,7 @@
         write(nu_diag_out+n-1,900) 'sss (ppt)              = ',sss(n)  ! sea surface salinity
         write(nu_diag_out+n-1,900) 'freezing temp (C)      = ',Tf(n)   ! freezing temperature
         write(nu_diag_out+n-1,900) 'heat used (W/m^2)      = ',pfhocn  ! ocean heat used by ice
-        
+
         if (tr_iso) then
           do k = 1, n_iso
              write(nu_diag_out+n-1,901) 'isotopic precip      = ',fiso_atm(n,k)*dt,k
@@ -284,7 +284,7 @@
 
       use icedrv_state, only: vice, vsno, trcr
 
-      integer (kind=int_kind) :: i, k, nt_isosno, nt_isoice
+      integer (kind=int_kind) :: i, k, nt_isosno, nt_isoice, nt_mp
 
       real (kind=dbl_kind), dimension (nx) :: work1
 
@@ -292,6 +292,7 @@
 
       call icepack_query_tracer_indices(nt_isosno_out=nt_isosno)
       call icepack_query_tracer_indices(nt_isoice_out=nt_isoice)
+      call icepack_query_tracer_indices(nt_mp_out=nt_mp)
 
       call total_energy (work1)
       do i = 1, nx
@@ -471,7 +472,7 @@
 
       character (*), intent(in) :: plabel
 
-      integer (kind=int_kind), intent(in) :: & 
+      integer (kind=int_kind), intent(in) :: &
           i              ! horizontal index
 
       ! local variables

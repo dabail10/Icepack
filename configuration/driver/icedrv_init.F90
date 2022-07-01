@@ -58,7 +58,7 @@
 
       use icedrv_diagnostics, only: diag_file, nx_names
       use icedrv_domain_size, only: nilyr, nslyr, nblyr, max_ntrcr, ncat
-      use icedrv_domain_size, only: n_iso, n_aero, nfsd
+      use icedrv_domain_size, only: n_iso, n_aero, n_mp, nfsd
       use icedrv_calendar, only: year_init, istep0
       use icedrv_calendar, only: dumpfreq, diagfreq, dump_last
       use icedrv_calendar, only: npt, dt, ndtd, days_per_year, use_leap_years
@@ -110,14 +110,14 @@
 
       integer (kind=int_kind) :: ntrcr
       logical (kind=log_kind) :: tr_iage, tr_FY, tr_lvl, tr_pond, tr_snow
-      logical (kind=log_kind) :: tr_iso, tr_aero, tr_fsd
+      logical (kind=log_kind) :: tr_iso, tr_aero, tr_mp, tr_fsd
       logical (kind=log_kind) :: tr_pond_cesm, tr_pond_lvl, tr_pond_topo, wave_spec
       integer (kind=int_kind) :: nt_Tsfc, nt_sice, nt_qice, nt_qsno, nt_iage, nt_FY
       integer (kind=int_kind) :: nt_alvl, nt_vlvl, nt_apnd, nt_hpnd, nt_ipnd, &
                                  nt_smice, nt_smliq, nt_rhos, nt_rsnw, &
-                                 nt_aero, nt_fsd, nt_isosno, nt_isoice
+                                 nt_aero, nt_mp, nt_fsd, nt_isosno, nt_isoice
 
-      real (kind=real_kind) :: rpcesm, rplvl, rptopo 
+      real (kind=real_kind) :: rpcesm, rplvl, rptopo
       real (kind=dbl_kind) :: Cf, puny
 
       character(len=*), parameter :: subname='(input_data)'
@@ -185,6 +185,7 @@
         tr_pond_topo, &
         tr_snow,      &
         tr_aero,      &
+        tr_mp,        &
         tr_fsd,       &
         tr_iso
 
@@ -204,7 +205,7 @@
            atmbndy_out=atmbndy, calc_strair_out=calc_strair, &
            formdrag_out=formdrag, highfreq_out=highfreq, &
            emissivity_out=emissivity, &
-           kitd_out=kitd, kcatbound_out=kcatbound, hs0_out=hs0, & 
+           kitd_out=kitd, kcatbound_out=kcatbound, hs0_out=hs0, &
            dpscale_out=dpscale, frzpnd_out=frzpnd, &
            rfracmin_out=rfracmin, rfracmax_out=rfracmax, &
            pndaspect_out=pndaspect, hs1_out=hs1, hp1_out=hp1, &
@@ -240,11 +241,11 @@
       year_init = 0          ! initial year
       istep0 = 0             ! no. of steps taken in previous integrations,
                              ! real (dumped) or imagined (to set calendar)
-      dt = 3600.0_dbl_kind   ! time step, s      
-      npt = 99999            ! total number of time steps (dt) 
+      dt = 3600.0_dbl_kind   ! time step, s
+      npt = 99999            ! total number of time steps (dt)
       diagfreq = 24          ! how often diag output is written
       diag_file = 'ice_diag' ! history file name prefix
-      cpl_bgc = .false.      ! 
+      cpl_bgc = .false.      !
       dumpfreq='y'           ! restart frequency option
       dump_last=.false.      ! restart at end of run
       restart = .false.      ! if true, read restart files for initialization
@@ -280,12 +281,13 @@
       ! extra tracers
       tr_iage      = .false. ! ice age
       tr_FY        = .false. ! ice age
-      tr_lvl       = .false. ! level ice 
+      tr_lvl       = .false. ! level ice
       tr_pond_cesm = .false. ! CESM melt ponds
       tr_pond_lvl  = .false. ! level-ice melt ponds
       tr_pond_topo = .false. ! topographic melt ponds
       tr_snow      = .false. ! snow tracers (wind redistribution, metamorphosis)
       tr_aero      = .false. ! aerosols
+      tr_mp        = .false. ! microplastics
       tr_fsd       = .false. ! floe size distribution
       tr_iso       = .false. ! isotopes
 
@@ -425,13 +427,13 @@
       !-----------------------------------------------------------------
       ! set up diagnostics output and resolve conflicts
       !-----------------------------------------------------------------
-      
+
       write(ice_stdout,*) 'Diagnostic output will be in files '
       write(ice_stdout,*)'    ','icepack.runlog.timestamp'
 
       do n = 1,nx
          write(nx_names(n),'(a,i2.2)') 'point_',n
-      enddo      
+      enddo
       nx_names(1) = 'icefree'
       nx_names(2) = 'slab'
       nx_names(3) = 'full_ITD'
@@ -443,7 +445,7 @@
          write(ice_stdout,*)'    ',trim(diag_file_names)
          open(nu_diag_out+n-1, file=diag_file_names, status='unknown')
       end do
-      
+
       write(nu_diag,*) '-----------------------------------'
       write(nu_diag,*) '  ICEPACK model diagnostic output  '
       write(nu_diag,*) '-----------------------------------'
@@ -556,6 +558,20 @@
          shortwave = 'dEdd'
       endif
 
+      if (tr_mp .and. n_mp==0) then
+         write (nu_diag,*) 'WARNING: microplastics activated but'
+         write (nu_diag,*) 'WARNING: not allocated in tracer array.'
+         write (nu_diag,*) 'WARNING: Activate in compilation script.'
+         call icedrv_system_abort(file=__FILE__,line=__LINE__)
+      endif
+
+      if (tr_mp .and. trim(shortwave) /= 'dEdd') then
+         write (nu_diag,*) 'WARNING: microplastics activated but dEdd'
+         write (nu_diag,*) 'WARNING: shortwave is not.'
+         write (nu_diag,*) 'WARNING: Setting shortwave = dEdd'
+         shortwave = 'dEdd'
+      endif
+
       if (tr_snow .and. trim(shortwave) /= 'dEdd') then
          write (nu_diag,*) 'WARNING: snow grain radius activated but'
          write (nu_diag,*) 'WARNING: dEdd shortwave is not.'
@@ -597,7 +613,7 @@
       endif
 
       if (tr_pond_cesm) then
-         write (nu_diag,*) 'ERROR: formdrag=T but frzpnd=cesm' 
+         write (nu_diag,*) 'ERROR: formdrag=T but frzpnd=cesm'
          call icedrv_system_abort(file=__FILE__,line=__LINE__)
       endif
 
@@ -780,6 +796,7 @@
          write(nu_diag,1010) ' tr_pond_topo              = ', tr_pond_topo
          write(nu_diag,1010) ' tr_snow                   = ', tr_snow
          write(nu_diag,1010) ' tr_aero                   = ', tr_aero
+         write(nu_diag,1010) ' tr_mp                     = ', tr_mp
          write(nu_diag,1010) ' tr_fsd                    = ', tr_fsd
 
          nt_Tsfc = 1           ! index tracers, starting with Tsfc = 1
@@ -828,7 +845,7 @@
                  nt_ipnd = ntrcr      ! on level-ice ponds (if frzpnd='hlid')
              endif
              if (tr_pond_topo) then
-                 ntrcr = ntrcr + 1    ! 
+                 ntrcr = ntrcr + 1    !
                  nt_ipnd = ntrcr      ! refrozen pond ice lid thickness
              endif
          endif
@@ -868,12 +885,18 @@
              nt_aero = ntrcr + 1
              ntrcr = ntrcr + 4*n_aero ! 4 dEdd layers, n_aero species
          endif
-              
+
+         nt_mp = max_ntrcr - 4*n_mp
+         if (tr_mp) then
+             nt_mp = ntrcr + 1
+             ntrcr = ntrcr + 4*n_mp ! 4 dEdd layers, n_mp species
+         endif
+
          if (ntrcr > max_ntrcr-1) then
             write(nu_diag,*) 'max_ntrcr-1 < number of namelist tracers'
             write(nu_diag,*) 'max_ntrcr-1 = ',max_ntrcr-1,' ntrcr = ',ntrcr
             call icedrv_system_abort(file=__FILE__,line=__LINE__)
-         endif                               
+         endif
 
          write(nu_diag,*) ' '
          write(nu_diag,1020) 'max_ntrcr = ', max_ntrcr
@@ -890,6 +913,7 @@
          write(nu_diag,1020) 'nfsd    = ', nfsd
          write(nu_diag,1020) 'n_iso   = ', n_iso
          write(nu_diag,1020) 'n_aero  = ', n_aero
+         write(nu_diag,1020) 'n_mp    = ', n_mp
          write(nu_diag,*)' '
          write(nu_diag,1020) 'nx      = ', nx
          write(nu_diag,*)' '
@@ -960,9 +984,9 @@
            windmin_in=windmin, drhosdwind_in=drhosdwind, snwlvlfac_in=snwlvlfac)
       call icepack_init_tracer_sizes(ntrcr_in=ntrcr, &
            ncat_in=ncat, nilyr_in=nilyr, nslyr_in=nslyr, nblyr_in=nblyr, &
-           nfsd_in=nfsd, n_iso_in=n_iso, n_aero_in=n_aero)
+           nfsd_in=nfsd, n_iso_in=n_iso, n_aero_in=n_aero, n_mp_in=n_mp)
       call icepack_init_tracer_flags(tr_iage_in=tr_iage, &
-           tr_FY_in=tr_FY, tr_lvl_in=tr_lvl, tr_aero_in=tr_aero, &
+           tr_FY_in=tr_FY, tr_lvl_in=tr_lvl, tr_aero_in=tr_aero, tr_mp_in=tr_mp, &
            tr_iso_in=tr_iso, tr_snow_in=tr_snow, &
            tr_pond_in=tr_pond, tr_pond_cesm_in=tr_pond_cesm, &
            tr_pond_lvl_in=tr_pond_lvl, &
@@ -974,7 +998,7 @@
            nt_apnd_in=nt_apnd, nt_hpnd_in=nt_hpnd, nt_ipnd_in=nt_ipnd, &
            nt_smice_in=nt_smice, nt_smliq_in=nt_smliq, &
            nt_rhos_in=nt_rhos, nt_rsnw_in=nt_rsnw, &
-           nt_aero_in=nt_aero, nt_fsd_in=nt_fsd, &
+           nt_aero_in=nt_aero, nt_mp_in=nt_mp, nt_fsd_in=nt_fsd, &
            nt_isosno_in=nt_isosno, nt_isoice_in=nt_isoice)
 
       call icepack_warnings_flush(nu_diag)
@@ -1043,7 +1067,7 @@
 
       use icepack_intfc, only: icepack_aggregate
       use icedrv_domain_size, only: ncat, nilyr, nslyr, nblyr, max_ntrcr
-      use icedrv_domain_size, only: n_iso, n_aero, nfsd
+      use icedrv_domain_size, only: n_iso, n_aero, n_mp, nfsd
       use icedrv_flux, only: sst, Tf, Tair, salinz, Tmltz
       use icedrv_state, only: trcr_depend, aicen, trcrn, vicen, vsnon
       use icedrv_state, only: aice0, aice, vice, vsno, trcr, aice_init
@@ -1058,12 +1082,12 @@
          heat_capacity   ! from icepack
 
       integer (kind=int_kind) :: ntrcr
-      logical (kind=log_kind) :: tr_iage, tr_FY, tr_lvl, tr_aero, tr_fsd, tr_iso
+      logical (kind=log_kind) :: tr_iage, tr_FY, tr_lvl, tr_aero, tr_mp, tr_fsd, tr_iso
       logical (kind=log_kind) :: tr_pond_cesm, tr_pond_lvl, tr_pond_topo, tr_snow
       integer (kind=int_kind) :: nt_Tsfc, nt_sice, nt_qice, nt_qsno, nt_iage, nt_fy
       integer (kind=int_kind) :: nt_alvl, nt_vlvl, nt_apnd, nt_hpnd, nt_ipnd, &
                                  nt_smice, nt_smliq, nt_rhos, nt_rsnw, &
-                                 nt_aero, nt_fsd, nt_isosno, nt_isoice
+                                 nt_aero, nt_mp, nt_fsd, nt_isosno, nt_isoice
 
       character(len=*), parameter :: subname='(init_state)'
 
@@ -1075,7 +1099,7 @@
          call icepack_query_tracer_sizes(ntrcr_out=ntrcr)
          call icepack_query_tracer_flags(tr_iage_out=tr_iage, &
               tr_FY_out=tr_FY, tr_lvl_out=tr_lvl, tr_aero_out=tr_aero, &
-              tr_iso_out=tr_iso, tr_snow_out=tr_snow, &
+              tr_mp_out=tr_mp, tr_iso_out=tr_iso, tr_snow_out=tr_snow, &
               tr_pond_cesm_out=tr_pond_cesm, tr_pond_lvl_out=tr_pond_lvl, &
               tr_pond_topo_out=tr_pond_topo, tr_fsd_out=tr_fsd)
          call icepack_query_tracer_indices(nt_Tsfc_out=nt_Tsfc, &
@@ -1087,7 +1111,7 @@
               nt_smice_out=nt_smice, nt_smliq_out=nt_smliq, &
               nt_rhos_out=nt_rhos, nt_rsnw_out=nt_rsnw, &
               nt_isosno_out=nt_isosno, nt_isoice_out=nt_isoice, &
-              nt_aero_out=nt_aero, nt_fsd_out=nt_fsd)
+              nt_aero_out=nt_aero, nt_mp_out=nt_mp, nt_fsd_out=nt_fsd)
          call icepack_warnings_flush(nu_diag)
          if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
              file=__FILE__,line= __LINE__)
@@ -1184,15 +1208,23 @@
             trcr_depend(nt_aero+(it-1)*4+3) = 1 ! ice
          enddo
       endif
+      if (tr_mp) then ! volume-weighted microplastics
+         do it = 1, n_mp
+            trcr_depend(nt_mp+(it-1)*4  ) = 2 ! snow
+            trcr_depend(nt_mp+(it-1)*4+1) = 2 ! snow
+            trcr_depend(nt_mp+(it-1)*4+2) = 1 ! ice
+            trcr_depend(nt_mp+(it-1)*4+3) = 1 ! ice
+         enddo
+      endif
 
       do it = 1, ntrcr
          ! mask for base quantity on which tracers are carried
          if (trcr_depend(it) == 0) then      ! area
-            trcr_base(it,1) = c1 
+            trcr_base(it,1) = c1
          elseif (trcr_depend(it) == 1) then  ! ice volume
-            trcr_base(it,2) = c1 
+            trcr_base(it,2) = c1
          elseif (trcr_depend(it) == 2) then  ! snow volume
-            trcr_base(it,3) = c1 
+            trcr_base(it,3) = c1
          else
             trcr_base(it,1) = c1    ! default: ice area
             trcr_base(it,2) = c0
@@ -1304,8 +1336,8 @@
 
       ! ocean values may be redefined here, unlike in CICE
       real (kind=dbl_kind), dimension (nx), intent(inout) :: &
-         Tf     , & ! freezing temperature (C) 
-         sst        ! sea surface temperature (C) 
+         Tf     , & ! freezing temperature (C)
+         sst        ! sea surface temperature (C)
 
       real (kind=dbl_kind), dimension (nx,nilyr), &
          intent(in) :: &
@@ -1381,7 +1413,7 @@
             aicen(i,n) = c0
             vicen(i,n) = c0
             vsnon(i,n) = c0
-            trcrn(i,nt_Tsfc,n) = Tf(i)  ! surface temperature 
+            trcrn(i,nt_Tsfc,n) = Tf(i)  ! surface temperature
             if (max_ntrcr >= 2) then
                do it = 2, max_ntrcr
                   trcrn(i,it,n) = c0
@@ -1409,7 +1441,7 @@
       !-----------------------------------------------------------------
 
       i = 1  ! ice-free
-             ! already initialized above 
+             ! already initialized above
 
       !-----------------------------------------------------------------
 
@@ -1443,7 +1475,7 @@
                                   afsd=trcrn(i,nt_fsd:nt_fsd+nfsd-1,n))
          ! surface temperature
          trcrn(i,nt_Tsfc,n) = Tsfc ! deg C
-         ! ice enthalpy, salinity 
+         ! ice enthalpy, salinity
          do k = 1, nilyr
             trcrn(i,nt_qice+k-1,n) = qin(k)
             trcrn(i,nt_sice+k-1,n) = salinz(i,k)
@@ -1467,15 +1499,15 @@
       call icepack_warnings_flush(nu_diag)
       if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
           file=__FILE__, line=__LINE__)
-      
+
       !-----------------------------------------------------------------
 
       i = 3  ! full thickness distribution
       ! initial category areas in cells with ice
       hbar = c3  ! initial ice thickness with greatest area
-      ! Note: the resulting average ice thickness 
+      ! Note: the resulting average ice thickness
       ! tends to be less than hbar due to the
-      ! nonlinear distribution of ice thicknesses 
+      ! nonlinear distribution of ice thicknesses
 
       sum = c0
       do n = 1, ncat
@@ -1491,7 +1523,7 @@
       do n = 1, ncat
          ainit(n) = ainit(n) / (sum + puny/ncat) ! normalize
       enddo
-      
+
       do n = 1, ncat
          ! ice volume, snow volume
          aicen(i,n) = ainit(n)
@@ -1513,7 +1545,7 @@
 
          ! surface temperature
          trcrn(i,nt_Tsfc,n) = Tsfc ! deg C
-         ! ice enthalpy, salinity 
+         ! ice enthalpy, salinity
          do k = 1, nilyr
             trcrn(i,nt_qice+k-1,n) = qin(k)
             trcrn(i,nt_sice+k-1,n) = salinz(i,k)
@@ -1539,7 +1571,7 @@
           file=__FILE__, line=__LINE__)
 
       !-----------------------------------------------------------------
-      
+
       ! land
       ! already initialized above (tmask = 0)
       i = 4

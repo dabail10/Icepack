@@ -126,7 +126,7 @@
       use icedrv_flux, only: flatn_f, fsensn_f, fsurfn_f, fcondtopn_f
       use icedrv_flux, only: dsnow, dsnown, faero_atm, faero_ocn, fmp_atm, fmp_ocn
       use icedrv_flux, only: fiso_atm, fiso_ocn, fiso_evap
-      use icedrv_flux, only: HDO_ocn, H2_16O_ocn, H2_18O_ocn
+      use icedrv_flux, only: HDO_ocn, H2_16O_ocn, H2_18O_ocn, mp_ocn
       use icedrv_init, only: lmask_n, lmask_s
       use icedrv_state, only: aice, aicen, aice_init, aicen_init, vicen_init
       use icedrv_state, only: vice, vicen, vsno, vsnon, trcrn, uvel, vvel, vsnon_init
@@ -375,6 +375,7 @@
             faero_ocn   = faero_ocn(i,1:n_aero),                  &
             fmp_atm     = fmp_atm(i,1:n_mp),                      &
             fmp_ocn     = fmp_ocn(i,1:n_mp),                      &
+            mp_ocn      = mp_ocn(i,1:n_mp),                       &
             fiso_atm    = fiso_atm   (i,:),                       &
             fiso_ocn    = fiso_ocn   (i,:),                       &
             fiso_evap   = fiso_evap  (i,:),                       &
@@ -474,7 +475,7 @@
       use icedrv_flux, only: fresh, frain, fpond, frzmlt, frazil, frz_onset
       use icedrv_flux, only: update_ocn_f, fsalt, Tf, sss, salinz, fhocn, rside, fside
       use icedrv_flux, only: meltl, frazil_diag, flux_bio, faero_ocn, fiso_ocn, fmp_ocn
-      use icedrv_flux, only: HDO_ocn, H2_16O_ocn, H2_18O_ocn
+      use icedrv_flux, only: HDO_ocn, H2_16O_ocn, H2_18O_ocn, mp_ocn
       use icedrv_init, only: tmask
       use icedrv_state, only: aice, aicen, aice0, trcr_depend
       use icedrv_state, only: aicen_init, vicen_init, trcrn, vicen, vsnon
