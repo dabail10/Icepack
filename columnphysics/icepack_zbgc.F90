@@ -1170,7 +1170,7 @@
          max_don     , & ! maximum number of dissolved organic nitrogen types
          max_fe      , & ! maximum number of iron types
          max_aero    , & ! maximum number of aerosols
-         max_mp      , & ! maximum number of micriplastics tracers
+         max_mp      , & ! maximum number of microplastics tracers
          max_nbtrcr      ! maximum number of bio tracers
 
       real (kind=dbl_kind), intent(in) :: &

@@ -18,15 +18,17 @@
       implicit none
       private :: &
           write_restart_age,       read_restart_age, &
-          write_restart_FY,        read_restart_FY, &  
-          write_restart_lvl,       read_restart_lvl, & 
-          write_restart_pond_cesm, read_restart_pond_cesm, & 
+          write_restart_FY,        read_restart_FY, &
+          write_restart_lvl,       read_restart_lvl, &
+          write_restart_pond_cesm, read_restart_pond_cesm, &
           write_restart_pond_lvl,  read_restart_pond_lvl, &
           write_restart_pond_topo, read_restart_pond_topo, &
           write_restart_snow,      read_restart_snow, &
           write_restart_fsd,       read_restart_fsd, &
           write_restart_iso,       read_restart_iso, &
-          write_restart_aero,      read_restart_aero
+          write_restart_aero,      read_restart_aero, &
+          write_restart_mp,        read_restart_mp
+
 
       public :: dumpfile, restartfile, final_restart, &
                 write_restart_field, read_restart_field
@@ -64,7 +66,7 @@
          nt_Tsfc, nt_sice, nt_qice, nt_qsno
 
       logical (kind=log_kind) :: &
-         tr_iage, tr_FY, tr_lvl, tr_iso, tr_aero, tr_brine, &
+         tr_iage, tr_FY, tr_lvl, tr_iso, tr_aero, tr_mp, tr_brine, &
          tr_pond_topo, tr_pond_cesm, tr_pond_lvl, tr_snow, tr_fsd
 !         solve_zsal, skl_bgc, z_tracers
 
@@ -73,16 +75,16 @@
 
       ! construct path/file
       iyear = nyr + year_init - 1
-      
+
       write(filename,'(a,a,a,i4.4,a,i2.2,a,i2.2,a,i5.5)') &
          restart_dir(1:lenstr(restart_dir)), &
          restart_file(1:lenstr(restart_file)),'.', &
          iyear,'-',month,'-',mday,'-',sec
-      
+
       call icepack_query_tracer_indices(nt_Tsfc_out=nt_Tsfc, nt_sice_out=nt_sice, &
            nt_qice_out=nt_qice, nt_qsno_out=nt_qsno)
       call icepack_query_tracer_flags(tr_iage_out=tr_iage, tr_FY_out=tr_FY, &
-           tr_lvl_out=tr_lvl, tr_aero_out=tr_aero, tr_iso_out=tr_iso, &
+           tr_lvl_out=tr_lvl, tr_aero_out=tr_aero, tr_mp_out=tr_mp, tr_iso_out=tr_iso, &
            tr_brine_out=tr_brine, &
            tr_pond_topo_out=tr_pond_topo, tr_pond_cesm_out=tr_pond_cesm, &
            tr_pond_lvl_out=tr_pond_lvl,tr_snow_out=tr_snow,tr_fsd_out=tr_fsd)
@@ -95,7 +97,7 @@
       open(nu_dump,file=filename,form='unformatted')
       write(nu_dump) istep1,time,time_forc
       write(nu_diag,*) 'Writing ',filename(1:lenstr(filename))
-      
+
       !-----------------------------------------------------------------
       ! state variables
       ! Tsfc is the only tracer written to binary files.  All other
@@ -143,6 +145,7 @@
       if (tr_snow)      call write_restart_snow()      ! snow metamorphosis tracers
       if (tr_iso)       call write_restart_iso()       ! ice isotopes
       if (tr_aero)      call write_restart_aero()      ! ice aerosols
+      if (tr_mp)        call write_restart_mp()      ! ice microplastics
       if (tr_brine)     call write_restart_hbrine()    ! brine height
       if (tr_fsd)       call write_restart_fsd()       ! floe size distribution
 ! called in icedrv_RunMod.F90 to prevent circular dependencies
@@ -181,13 +184,13 @@
          nt_Tsfc, nt_sice, nt_qice, nt_qsno
 
       logical (kind=log_kind) :: &
-         tr_iage, tr_FY, tr_lvl, tr_iso, tr_aero, tr_brine, &
+         tr_iage, tr_FY, tr_lvl, tr_iso, tr_aero, tr_mp, tr_brine, &
          tr_pond_topo, tr_pond_cesm, tr_pond_lvl, tr_snow, tr_fsd
 
       character(len=char_len_long) :: filename
       character(len=*), parameter :: subname='(restartfile)'
 
-      if (present(ice_ic)) then 
+      if (present(ice_ic)) then
          filename = trim(ice_ic)
       else
          call icedrv_system_abort(string=subname//'no ice_ic present', &
@@ -202,7 +205,7 @@
       call icepack_query_tracer_indices(nt_Tsfc_out=nt_Tsfc, nt_sice_out=nt_sice, &
            nt_qice_out=nt_qice, nt_qsno_out=nt_qsno)
       call icepack_query_tracer_flags(tr_iage_out=tr_iage, tr_FY_out=tr_FY, &
-           tr_lvl_out=tr_lvl, tr_aero_out=tr_aero, tr_iso_out=tr_iso, &
+           tr_lvl_out=tr_lvl, tr_aero_out=tr_aero,tr_mp_out=tr_mp, tr_iso_out=tr_iso, &
            tr_brine_out=tr_brine, &
            tr_pond_topo_out=tr_pond_topo, tr_pond_cesm_out=tr_pond_cesm, &
            tr_pond_lvl_out=tr_pond_lvl,tr_snow_out=tr_snow,tr_fsd_out=tr_fsd)
@@ -228,12 +231,12 @@
       do k=1,nilyr
          call read_restart_field(nu_restart,trcrn(:,nt_sice+k-1,:),ncat)
       enddo
-      
+
       write(nu_diag,*) 'min/max qice for each layer'
       do k=1,nilyr
          call read_restart_field(nu_restart,trcrn(:,nt_qice+k-1,:),ncat)
       enddo
-      
+
       write(nu_diag,*) 'min/max qsno for each layer'
       do k=1,nslyr
          call read_restart_field(nu_restart,trcrn(:,nt_qsno+k-1,:),ncat)
@@ -271,6 +274,7 @@
       if (tr_snow)      call read_restart_snow()      ! snow metamorphosis tracers
       if (tr_iso)       call read_restart_iso()       ! ice isotopes
       if (tr_aero)      call read_restart_aero()      ! ice aerosols
+      if (tr_mp)        call read_restart_mp()        ! ice microplastics
       if (tr_brine)     call read_restart_hbrine      ! brine height
       if (tr_fsd)       call read_restart_fsd()       ! floe size distribution
       !-----------------------------------------------------------------
@@ -350,9 +354,9 @@
       maxw = maxval(work)
       sumw = sum(work)
       write(nu_diag,*) subname, minw, maxw, sumw
-      
+
       end subroutine read_restart_field
-      
+
 !=======================================================================
 
 ! Writes a single restart field.
@@ -373,10 +377,10 @@
 
       integer (kind=int_kind) :: &
          n, i              ! loop indices
-      
+
       real (kind=dbl_kind), dimension(nx) :: &
          work2             ! input array (real, 8-byte)
-      
+
       real (kind=dbl_kind) :: &
         minw, maxw, sumw    ! diagnostics
 
@@ -386,12 +390,12 @@
         work2(:) = work(:,n)
         write(nu) (work2(i), i=1,nx)
       enddo
-      
+
       minw = minval(work)
       maxw = maxval(work)
       sumw = sum(work)
       write(nu_diag,*) subname, minw, maxw, sumw
-      
+
       end subroutine write_restart_field
 
 !=======================================================================
@@ -422,7 +426,7 @@
       use icedrv_state, only: trcrn
       use icedrv_domain_size, only: ncat
 
-      integer (kind=int_kind) :: nt_apnd, nt_hpnd, nt_ipnd 
+      integer (kind=int_kind) :: nt_apnd, nt_hpnd, nt_ipnd
       character(len=*), parameter :: subname='(write_restart_pond_topo)'
 
       call icepack_query_tracer_indices(nt_apnd_out=nt_apnd, nt_hpnd_out=nt_hpnd, &
@@ -448,7 +452,7 @@
 
       use icedrv_state, only: trcrn
       use icedrv_domain_size, only: ncat
-      integer (kind=int_kind) :: nt_apnd, nt_hpnd, nt_ipnd 
+      integer (kind=int_kind) :: nt_apnd, nt_hpnd, nt_ipnd
       character(len=*), parameter :: subname='(read_restart_pond_topo)'
 
       call icepack_query_tracer_indices(nt_apnd_out=nt_apnd, nt_hpnd_out=nt_hpnd, &
@@ -496,7 +500,7 @@
 
 !=======================================================================
 
-! Reads all values needed to restart snow redistribution/metamorphism 
+! Reads all values needed to restart snow redistribution/metamorphism
 !
 ! authors Elizabeth C. Hunke, LANL
 
@@ -848,7 +852,7 @@
          k                    ! loop indices
       integer (kind=int_kind) :: nt_aero
       character(len=*), parameter :: subname='(write_restart_aero)'
-    
+
       call icepack_query_tracer_indices(nt_aero_out=nt_aero)
       call icepack_warnings_flush(nu_diag)
       if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
@@ -904,6 +908,81 @@
 
       end subroutine read_restart_aero
 
+      !=======================================================================
+
+      ! Dumps all values needed for restarting microplastics
+      !
+      ! authors Alexandra Jahn, CU Boulder
+      !         David Bailey, NCAR
+
+
+            subroutine write_restart_mp()
+
+            use icedrv_domain_size, only: n_mp
+            use icedrv_state, only: trcrn
+            use icedrv_domain_size, only: ncat
+
+            ! local variables
+
+            integer (kind=int_kind) :: &
+               k                    ! loop indices
+            integer (kind=int_kind) :: nt_mp
+            character(len=*), parameter :: subname='(write_restart_mp)'
+
+            call icepack_query_tracer_indices(nt_mp_out=nt_mp)
+            call icepack_warnings_flush(nu_diag)
+            if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
+                file=__FILE__,line= __LINE__)
+
+            write(nu_diag,*) 'write_restart_mp (microplastics)'
+
+            do k = 1, n_mp
+               call write_restart_field(nu_dump, trcrn(:,nt_mp  +(k-1)*4,:), ncat)
+               call write_restart_field(nu_dump, trcrn(:,nt_mp+1+(k-1)*4,:), ncat)
+               call write_restart_field(nu_dump, trcrn(:,nt_mp+2+(k-1)*4,:), ncat)
+               call write_restart_field(nu_dump, trcrn(:,nt_mp+3+(k-1)*4,:), ncat)
+            enddo
+
+            end subroutine write_restart_mp
+
+      !=======================================================================
+
+      ! Reads all values needed for an ice microplastics restart
+      !
+      ! authors Alexandra Jahn, CU Boulder
+      !         David Bailey, NCAR
+
+            subroutine read_restart_mp()
+
+            use icedrv_domain_size, only: n_mp
+            use icedrv_state, only: trcrn
+            use icedrv_domain_size, only: ncat
+
+            ! local variables
+
+            integer (kind=int_kind) :: &
+               k                    ! loop indices
+            integer (kind=int_kind) :: nt_mp
+            character(len=*), parameter :: subname='(read_restart_mp)'
+
+            !-----------------------------------------------------------------
+
+            call icepack_query_tracer_indices(nt_mp_out=nt_mp)
+            call icepack_warnings_flush(nu_diag)
+            if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
+                file=__FILE__,line= __LINE__)
+
+            write(nu_diag,*) 'read_restart_mp (microplastics)'
+
+            do k = 1, n_mp
+               call read_restart_field(nu_restart, trcrn(:,nt_mp  +(k-1)*4,:), ncat)
+               call read_restart_field(nu_restart, trcrn(:,nt_mp+1+(k-1)*4,:), ncat)
+               call read_restart_field(nu_restart, trcrn(:,nt_mp+2+(k-1)*4,:), ncat)
+               call read_restart_field(nu_restart, trcrn(:,nt_mp+3+(k-1)*4,:), ncat)
+            enddo
+
+            end subroutine read_restart_mp
+
 !=======================================================================
 
 ! Dumps all values needed for restarting
@@ -924,7 +1003,7 @@
          k                    ! loop indices
       integer (kind=int_kind) :: nt_isosno, nt_isoice
       character(len=*), parameter :: subname='(write_restart_iso)'
-    
+
       call icepack_query_tracer_indices(nt_isosno_out=nt_isosno)
       call icepack_query_tracer_indices(nt_isoice_out=nt_isoice)
       call icepack_warnings_flush(nu_diag)
@@ -1001,7 +1080,7 @@
       if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
           file=__FILE__,line= __LINE__)
 
-        do i = 1, nx  
+        do i = 1, nx
            do n = 1, ncat
               if (first_ice     (i,n)) then
                   first_ice_real(i,n) = c1
@@ -1052,7 +1131,7 @@
                    first_ice     (i,n) = .false.
                endif
             enddo ! ncat
-         enddo    ! i 
+         enddo    ! i
 
       end subroutine read_restart_hbrine
 

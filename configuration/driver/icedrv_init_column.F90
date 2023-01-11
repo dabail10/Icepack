@@ -687,7 +687,8 @@
           tr_bgc_DMS,    tr_bgc_PON,                 &
           tr_bgc_N,      tr_bgc_C,     tr_bgc_chl,   &
           tr_bgc_DON,    tr_bgc_Fe,    tr_zaero,     &
-          tr_bgc_hum,    tr_aero,      tr_zmp
+          tr_bgc_hum,    tr_aero,      tr_mp,        &
+          tr_zmp
 
       integer (kind=int_kind) :: &
           ktherm
@@ -737,7 +738,9 @@
           doctype_s          , doctype_l          , dontype_protein    ,  &
           fedtype_1          , feptype_1          , zaerotype_bc1      ,  &
           zaerotype_bc2      , zaerotype_dust1    , zaerotype_dust2    ,  &
-          zaerotype_dust3    , zaerotype_dust4    , ratio_C2N_diatoms  ,  &
+          zaerotype_dust3    , zaerotype_dust4    , zmptype_1          ,  &
+          zmptype_2          , zmptype_3          , zmptype_4          ,  &
+          zmptype_5          , zmptype_6          , ratio_C2N_diatoms  ,  &
           ratio_C2N_sp       , ratio_C2N_phaeo    , ratio_chl2N_diatoms,  &
           ratio_chl2N_sp     , ratio_chl2N_phaeo  , F_abs_chl_diatoms  ,  &
           F_abs_chl_sp       , F_abs_chl_phaeo    , ratio_C2N_proteins
@@ -892,7 +895,9 @@
         doctype_s          , doctype_l          , dontype_protein    ,  &
         fedtype_1          , feptype_1          , zaerotype_bc1      ,  &
         zaerotype_bc2      , zaerotype_dust1    , zaerotype_dust2    ,  &
-        zaerotype_dust3    , zaerotype_dust4    , ratio_C2N_diatoms  ,  &
+        zaerotype_dust3    , zaerotype_dust4    , zmptype_1          ,  &
+        zmptype_2          , zmptype_3          , zmptype_4          ,  &
+        zmptype_5          , zmptype_6          , ratio_C2N_diatoms  ,  &
         ratio_C2N_sp       , ratio_C2N_phaeo    , ratio_chl2N_diatoms,  &
         ratio_chl2N_sp     , ratio_chl2N_phaeo  , F_abs_chl_diatoms  ,  &
         F_abs_chl_sp       , F_abs_chl_phaeo    , ratio_C2N_proteins
@@ -903,6 +908,7 @@
 
       call icepack_query_tracer_sizes(ntrcr_out=ntrcr)
       call icepack_query_tracer_flags(tr_aero_out=tr_aero)
+      call icepack_query_tracer_flags(tr_mp_out=tr_mp)
       call icepack_query_parameters(ktherm_out=ktherm, shortwave_out=shortwave, &
            scale_bgc_out=scale_bgc, skl_bgc_out=skl_bgc, z_tracers_out=z_tracers, &
            dEdd_algae_out=dEdd_algae, solve_zbgc_out=solve_zbgc, phi_snow_out=phi_snow, &
@@ -1028,6 +1034,12 @@
       zaerotype_dust2    = c1            !
       zaerotype_dust3    = c1            !
       zaerotype_dust4    = c1            !--------------------
+      zmptype_1          = c1            !
+      zmptype_2          = c1            !
+      zmptype_3          = c1            !
+      zmptype_4          = c1            !
+      zmptype_5          = c1            !
+      zmptype_6          = c1            !--------------------
       ratio_C2N_diatoms  = 7.0_dbl_kind  ! algal C to N ratio (mol/mol)
       ratio_C2N_sp       = 7.0_dbl_kind
       ratio_C2N_phaeo    = 7.0_dbl_kind
@@ -1147,6 +1159,13 @@
          write(nu_diag,*) 'WARNING: setting tr_zaero = F'
          tr_zaero = .false.
       endif
+
+      if (skl_bgc .AND. tr_zmp) then
+         write(nu_diag,*) 'WARNING: skl bgc does not use vertical tracers'
+         write(nu_diag,*) 'WARNING: setting tr_zmp = F'
+         tr_zmp = .false.
+      endif
+
 
       if (skl_bgc .AND. tr_zmp) then
          write(nu_diag,*) 'WARNING: skl bgc does not use vertical tracers'
@@ -1275,19 +1294,6 @@
          call icedrv_system_abort(file=__FILE__,line=__LINE__)
       endif
 
-      if (skl_bgc .and. n_bgc < 2) then
-         write (nu_diag,*) ' '
-         write (nu_diag,*) 'comp_ice must have number of bgc tracers >= 2'
-         write (nu_diag,*) 'number of bgc tracers compiled:',n_bgc
-         call icedrv_system_abort(file=__FILE__,line=__LINE__)
-      endif
-
-      if (solve_zbgc .and. n_bgc < 2) then
-         write (nu_diag,*) ' '
-         write (nu_diag,*) 'comp_ice must have number of zbgc tracers >= 2'
-         write (nu_diag,*) 'number of bgc tracers compiled:',n_bgc
-         call icedrv_system_abort(file=__FILE__,line=__LINE__)
-      endif
 
       if (tr_zmp .and. TRZMP <  1) then
          write (nu_diag,*) ' '
@@ -1544,6 +1550,13 @@
       zaerotype(4) = zaerotype_dust2
       zaerotype(5) = zaerotype_dust3
       zaerotype(6) = zaerotype_dust4
+
+      zmptype(1) = zmptype_1
+      zmptype(2) = zmptype_2
+      zmptype(3) = zmptype_3
+      zmptype(4) = zmptype_4
+      zmptype(5) = zmptype_5
+      zmptype(6) = zmptype_6
 
       call icepack_init_zbgc ( &
            R_Si2N_in=R_Si2N, &
@@ -1812,6 +1825,23 @@
             enddo   ! mm
          endif      ! tr_zaero
 
+         ! z layer microplastics
+         if (tr_zmp) then
+            do mm = 1, n_zaero
+               if (dEdd_algae) then
+                  nlt_zmp_sw(mm) = nbtrcr_sw + 1
+                  nbtrcr_sw = nbtrcr_sw + nilyr + nslyr+2
+               endif
+               call init_bgc_trcr(nk,              nt_fbri,       &
+                                  nt_zmp(mm),      nlt_zmp(mm), &
+                                  zmptype(mm),     nt_depend,     &
+                                  ntrcr,           nbtrcr,        &
+                                  bgc_tracer_type, trcr_depend,   &
+                                  trcr_base,       n_trcr_strata, &
+                                  nt_strata,       bio_index)
+            enddo   ! mm
+         endif      ! tr_zmp
+
 !echmod keep trcr indices etc here but move zbgc_frac_init, zbgc_init_frac, tau_ret, tau_rel to icepack
          if (nbtrcr > 0) then
             nt_zbgc_frac = ntrcr + 1
@@ -1880,7 +1910,7 @@
            tr_bgc_DMS_in=tr_bgc_DMS, tr_bgc_PON_in=tr_bgc_PON,                             &
            tr_bgc_N_in  =tr_bgc_N,   tr_bgc_C_in  =tr_bgc_C,   tr_bgc_chl_in=tr_bgc_chl,   &
            tr_bgc_DON_in=tr_bgc_DON, tr_bgc_Fe_in =tr_bgc_Fe,  tr_zaero_in  =tr_zaero,     &
-           tr_bgc_hum_in=tr_bgc_hum)
+           tr_zmp_in = tr_zmp, tr_bgc_hum_in=tr_bgc_hum)
       call icepack_warnings_flush(nu_diag)
       if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
           file=__FILE__, line=__LINE__)

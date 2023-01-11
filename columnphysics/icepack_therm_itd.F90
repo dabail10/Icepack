@@ -1202,7 +1202,6 @@ if (flag) then ! grid cells with lateral melting.
          enddo ! k
       endif    ! tr_aero
 
-      !AJ: Correct?
       if (tr_mp) then
          do k = 1, n_mp
             fmp_ocn(k) = fmp_ocn(k) + (vsnon(n) &
@@ -1220,7 +1219,7 @@ if (flag) then ! grid cells with lateral melting.
             fiso_ocn(k) = fiso_ocn(k) &
                         + (vsnon(n)*trcrn(nt_isosno+k-1,n) &
                         +  vicen(n)*trcrn(nt_isoice+k-1,n)) &
-                        * rside / dt
+                        * rside / dt !AJ: BUG? should it be rsiden(n) here?
          enddo ! k
       endif    ! tr_iso
 
@@ -1742,7 +1741,7 @@ if (hsurp > c0) then   ! add ice to all categories
          enddo
       endif
 
-      if (tr_mp .and. vtmp > puny) then !AJ: IS THIS CORRECT?
+      if (tr_mp .and. vtmp > puny) then
          do it = 1, n_mp
             trcrn(nt_mp+2+4*(it-1),n) = &
             trcrn(nt_mp+2+4*(it-1),n)*vicen(n) / vtmp
@@ -1873,14 +1872,19 @@ if (d_an_tot(n) > c0 .and. vin0new(n) > c0) then  ! add ice to category n
          enddo
       endif
 
-      if (tr_mp) then !AJ: IS THIS CORRECT
-         do it = 1, n_mp
-           trcrn(nt_mp+2+4*(it-1),n) = &
-           trcrn(nt_mp+2+4*(it-1),n)*vice1/vicen(n)
-           trcrn(nt_mp+3+4*(it-1),n) = &
-           trcrn(nt_mp+3+4*(it-1),n)*vice1/vicen(n)
-         enddo
-      endif
+!      if (tr_mp) then !AJ: need to follow isotopes (as aerosols are assumed to be 0 in frazil ice). NOT CLEAR WHAT TO DO HERE
+!         do it = 1, n_mp
+!          trcrn(nt_mp+2+4*(it-1),n)  &
+!             = (trcrn(nt_mp+2+4*(it-1),n)*vice1) &
+!             + mp_ocn*rhoi*vi0new/vicen(1) !vi0new = total frazil volume; Don't want to use vice1 (ratio of old to new, dilluting MPs) vicen(1) or vicen(n)?
+!           trcrn(nt_mp+3+4*(it-1),n)  &
+!               = (trcrn(nt_mp+3+4*(it-1),n)*vice1) &
+!               + mp_ocn*rhoi*vi0new/vicen(1) !vi0new = total frazil volume; Don't want to use vice1 (ratio of old to new, dilluting MPs) vicen(1) or vicen(n)?
+!           frazil_conc =
+!           fiso_ocn(it) = fiso_ocn(it) &
+!                        - frazil_conc*rhoi*vi0new/dt !AJ: What should frazil_conc be here for MP?
+!         enddo
+!      endif
 
      frazil_conc = c0
      if (tr_iso) then

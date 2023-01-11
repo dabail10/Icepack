@@ -174,10 +174,10 @@
          do k = 1,n_mp
             sloss1 = c0
             sloss2 = c0
-            if (dzint > puny)  &                    ! Probably don't need this?
+            if (dzint > puny)  &     ! Internal layer
                  sloss2 = min(dhi_congel, dzint)  &
                         *mp_ocn(k)/dzint*rhoi*aicen
-            if (dzssl > puny)  &
+            if (dzssl > puny)  & ! Surface scattering layer
                  sloss1 = max(dhi_congel-dzint, c0)  &
                         *mp_ocn(k)/dzint*rhoi*aicen
             mpice(k,1) = mpice(k,1) &

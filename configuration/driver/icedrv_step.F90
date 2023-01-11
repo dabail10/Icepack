@@ -1083,7 +1083,6 @@
                          hpndn=trcrn(i,nt_hpnd,:),                      &
                          ipndn=trcrn(i,nt_ipnd,:),                      &
                          aeron=trcrn(i,nt_aero:nt_aero+4*n_aero-1,:),   &
-                         !AJ: Correct?
                          mpn=trcrn(i,nt_mp:nt_mp+4*n_mp-1,:),           &
                          bgcNn=trcrn(i,nt_bgc_N(1):nt_bgc_N(1)+n_algae*(nblyr+3)-1,:), &
                          zaeron=trcrn(i,nt_zaero(1):nt_zaero(1)+n_zaero*(nblyr+3)-1,:), &

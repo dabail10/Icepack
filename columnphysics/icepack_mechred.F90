@@ -1400,7 +1400,7 @@
                             + trcrn(nt_aero+1+4*(it-1),n))
                enddo
             endif
-!AJ: Correct?
+
             if (tr_mp) then
                do it = 1, n_mp
                   mmp(it) = mmp(it) &

@@ -44,7 +44,8 @@
       use icedrv_flux, only: init_coupler_flux, init_history_therm, &
           init_flux_atm_ocn
       use icedrv_forcing, only: init_forcing, get_forcing, get_wave_spec
-      use icedrv_forcing_bgc, only: get_forcing_bgc, faero_default, fiso_default, init_forcing_bgc 
+      use icedrv_forcing_bgc, only: get_forcing_bgc, faero_default, &
+          fmp_default, fiso_default, init_forcing_bgc
       use icedrv_restart_shared, only: restart
       use icedrv_init, only: input_data, init_state, init_grid2, init_fsd
       use icedrv_init_column, only: init_thermo_vertical, init_shortwave, init_zbgc
@@ -55,8 +56,10 @@
          z_tracers, &  ! from icepack
          tr_snow, &    ! from icepack
          tr_aero, &    ! from icepack
-         tr_iso, &     ! from icepack
+         tr_mp,   &    ! from icepack
+         tr_iso,  &    ! from icepack
          tr_zaero, &   ! from icepack
+         tr_zmp,   &   ! from icepack
          tr_fsd, wave_spec
 
       character(len=*), parameter :: subname='(icedrv_initialize)'
@@ -134,11 +137,13 @@
       call icepack_query_tracer_flags(tr_aero_out=tr_aero)
       call icepack_query_tracer_flags(tr_iso_out=tr_iso)
       call icepack_query_tracer_flags(tr_zaero_out=tr_zaero)
+      call icepack_query_tracer_flags(tr_zmp_out=tr_zmp)
+
       call icepack_warnings_flush(nu_diag)
       if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
           file=__FILE__,line= __LINE__)
 
-      call init_forcing      ! initialize forcing (standalone)     
+      call init_forcing      ! initialize forcing (standalone)
       if (skl_bgc .or. z_tracers) call init_forcing_bgc !cn
       if (tr_fsd .and. wave_spec) call get_wave_spec ! wave spectrum in ice
       call get_forcing(istep1)       ! get forcing from data arrays
@@ -149,6 +154,7 @@
       ! if (tr_aero)  call faero_data                   ! data file
       ! if (tr_zaero) call fzaero_data                  ! data file (gx1)
       if (tr_aero .or. tr_zaero)  call faero_default    ! default values
+      if (tr_mp .or. tr_zmp)  call fmp_default          ! default values
       if (skl_bgc .or. z_tracers) call get_forcing_bgc  ! biogeochemistry
 
       if (.not. restart) &

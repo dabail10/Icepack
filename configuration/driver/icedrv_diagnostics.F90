@@ -267,6 +267,12 @@
              write(nu_diag_out+n-1,901) 'isotopic conc chg    = ',pdiso(n,k),k
           enddo
         endif
+        if (tr_mp) then !AJ: ADD OUTOUT STUFF FOR MP
+          do k = 1, n_mp
+             write(nu_diag_out+n-1,901) 'microplastic flux from atmos      = ',fmp_atm(n,k)*dt,k
+             write(nu_diag_out+n-1,901) 'microplastic flux to ocn = ',fmp_ocn(n,k)*dt,k
+          enddo
+        endif
       end do
 899   format (43x,a24)
 900   format (a25,2x,f24.17)

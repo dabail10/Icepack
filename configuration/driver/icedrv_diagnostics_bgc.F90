@@ -399,7 +399,7 @@
                pflux_zmp        (:) = c0
                pflux_atm_zmp_s  (:) = c0
                pflux_atm_zmp    (:) = c0
-               pflux_snow_zmp (:) = c0
+               pflux_snow_zmp   (:) = c0
 
                if (tr_bgc_Nit) then
                   pflux_NO       = flux_bio(n,nlt_bgc_Nit)*mps_to_cmpdy/c100
@@ -506,10 +506,10 @@
                   pNs    (k,:) = c0
                   pDOCs  (k,:) = c0
                   pDONs  (k,:) = c0
-                  pFeds  (k,:)= c0
-                  pFeps  (k,:)= c0
+                  pFeds  (k,:) = c0
+                  pFeps  (k,:) = c0
                   pzaeros(k,:) = c0
-                  pzmps(k,:) = c0
+                  pzmps  (k,:) = c0
                   pPONs  (k  ) = c0
                   phums  (k  ) = c0
                   pNOs   (k  ) = c0

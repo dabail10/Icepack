@@ -33,12 +33,12 @@
 
       use icedrv_calendar, only: istep, istep1, time, dt, stop_now, calendar
       use icedrv_forcing, only: get_forcing, get_wave_spec
-      use icedrv_forcing_bgc, only: faero_default, fiso_default, get_forcing_bgc
+      use icedrv_forcing_bgc, only: faero_default, fmp_default, fiso_default, get_forcing_bgc
       use icedrv_flux, only: init_flux_atm_ocn
       use icedrv_history, only: history_cdf, history_close
 
       logical (kind=log_kind) :: skl_bgc, z_tracers, tr_aero, tr_zaero, &
-                                 wave_spec, tr_fsd, tr_iso
+                                 tr_mp, tr_zmp, wave_spec, tr_fsd, tr_iso
 
       character(len=*), parameter :: subname='(icedrv_run)'
 
@@ -47,6 +47,7 @@
    !--------------------------------------------------------------------
 
       call icepack_query_tracer_flags(tr_aero_out=tr_aero, tr_zaero_out=tr_zaero, &
+                                      tr_mp_out=tr_mp, tr_zmp_out=tr_zmp,         &
                                       tr_fsd_out=tr_fsd, tr_iso_out=tr_iso)
       call icepack_warnings_flush(nu_diag)
       if (icepack_warnings_aborted()) call icedrv_system_abort(string=subname, &
@@ -79,6 +80,8 @@
          ! biogeochemistry forcing
          if (tr_iso)                 call fiso_default     ! default values
          if (tr_aero .or. tr_zaero)  call faero_default    ! default values
+         if (tr_mp .or. tr_zmp)      call fmp_default      ! default values
+
          if (skl_bgc .or. z_tracers) call get_forcing_bgc  ! biogeochemistry
 
          call init_flux_atm_ocn ! initialize atmosphere, ocean fluxes
@@ -127,7 +130,7 @@
       !-----------------------------------------------------------------
 
       call icepack_query_parameters(skl_bgc_out=skl_bgc, z_tracers_out=z_tracers)
-      call icepack_query_parameters(solve_zsal_out=solve_zsal, & 
+      call icepack_query_parameters(solve_zsal_out=solve_zsal, &
                                     calc_Tsfc_out=calc_Tsfc, &
                                     wave_spec_out=wave_spec)
       call icepack_query_tracer_flags(tr_brine_out=tr_brine,tr_fsd_out=tr_fsd, &
@@ -147,7 +150,7 @@
       !-----------------------------------------------------------------
       ! Scale radiation fields
       !-----------------------------------------------------------------
-      
+
       if (calc_Tsfc) call prep_radiation ()
 
 !      call icedrv_diagnostics_debug ('post prep_radiation')
@@ -169,26 +172,26 @@
       !-----------------------------------------------------------------
       ! dynamics, transport, ridging
       !-----------------------------------------------------------------
-      
+
       call init_history_dyn
-      
+
       ! wave fracture of the floe size distribution
       ! note this is called outside of the dynamics subcycling loop
       if (tr_fsd .and. wave_spec) call step_dyn_wave(dt)
 
       do k = 1, ndtd
-        
+
         ! ridging
         call step_dyn_ridge (dt_dyn, ndtd)
-        
+
         ! clean up, update tendency diagnostics
         offset = c0
         call update_state (dt_dyn, daidtd, dvidtd, dagedtd, offset)
-        
+
       enddo
 
 !      call icedrv_diagnostics_debug ('post dynamics')
-      
+
       !-----------------------------------------------------------------
       ! snow redistribution and metamorphosis
       !-----------------------------------------------------------------
@@ -203,13 +206,13 @@
       !-----------------------------------------------------------------
       ! albedo, shortwave radiation
       !-----------------------------------------------------------------
-      
+
       call step_radiation (dt)
 
       !-----------------------------------------------------------------
       ! get ready for coupling and the next time step
       !-----------------------------------------------------------------
-      
+
       call coupling_prep
 
 !      call icedrv_diagnostics_debug ('post step_rad, cpl')
@@ -217,7 +220,7 @@
       !-----------------------------------------------------------------
       ! write data
       !-----------------------------------------------------------------
-      
+
       if (mod(istep,diagfreq) == 0) then
          call runtime_diags(dt)       ! log file
          if (solve_zsal)              call zsal_diags
@@ -228,16 +231,16 @@
       if (history_cdf) then
          call history_write()
       endif
-      
+
       if (write_restart == 1) then
          call dumpfile     ! core variables for restarting
          if (solve_zsal .or. skl_bgc .or. z_tracers) &
             call write_restart_bgc         ! biogeochemistry
          call final_restart
       endif
-      
+
     end subroutine ice_step
-    
+
 !=======================================================================
 !
 ! Prepare for coupling
@@ -264,7 +267,7 @@
 
       ! local variables
 
-      integer (kind=int_kind) :: & 
+      integer (kind=int_kind) :: &
          n           , & ! thickness category index
          i           , & ! horizontal index
          k           , & ! tracer index
@@ -314,7 +317,7 @@
          do n = 1, ncat
          do i = 1, nx
             if (aicen(i,n) > puny) then
-                  
+
             alvdf(i) = alvdf(i) + alvdfn(i,n)*aicen(i,n)
             alidf(i) = alidf(i) + alidfn(i,n)*aicen(i,n)
             alvdr(i) = alvdr(i) + alvdrn(i,n)*aicen(i,n)
@@ -329,7 +332,7 @@
 
             apeff_ai(i) = apeff_ai(i) + apeffn(i,n)*aicen(i,n) ! for history
             snowfrac(i) = snowfrac(i) + snowfracn(i,n)*aicen(i,n) ! for history
-               
+
             endif ! aicen > puny
          enddo
          enddo
@@ -357,8 +360,8 @@
             fsalt_ai  (i) = fsalt  (i)
             fhocn_ai  (i) = fhocn  (i)
             fswthru_ai(i) = fswthru(i)
-            fzsal_ai  (i) = fzsal  (i) 
-            fzsal_g_ai(i) = fzsal_g(i)  
+            fzsal_ai  (i) = fzsal  (i)
+            fzsal_g_ai(i) = fzsal_g(i)
 
             if (nbtrcr > 0) then
             do k = 1, nbtrcr
