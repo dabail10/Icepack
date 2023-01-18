@@ -1107,7 +1107,8 @@
                           n_doc,                 n_dic,                  &
                           n_don,                                         &
                           n_fed,                 n_fep,                  &
-                          n_zaero,               first_ice(n),           &
+                          n_zaero,               n_zmp,                  & !AJ: NEED MP HERE?
+                          first_ice(n),                                  & 
                           hin_old(n),            ocean_bio(1:nbtrcr),    &
                           bphi(:,n),             iphin,                  &
                           iDi(:,n),  &
@@ -1200,7 +1201,7 @@
          zaeros          ! ocean aerosols (mmol/m^3)
 
       real (kind=dbl_kind), dimension (max_mp), intent(in) :: &
-          zmps          ! ocean microplastics (mmol/m^3)
+          zmps           ! ocean microplastics (mmol/m^3)
 
       real (kind=dbl_kind), dimension (max_nbtrcr), intent(inout) :: &
          ocean_bio_all   ! fixed order, all values even for tracers false
@@ -1265,10 +1266,11 @@
       do k = 1, max_aero
          ocean_bio_all(ks+k) = zaeros(k)             ! zaero
       enddo
+      ks = ks + max_aero + 1
       do k = 1, max_mp
          ocean_bio_all(ks+k) = zmps(k)               ! zmp
       enddo
-      ks = ks + max_aero + 1
+      ks = ks + max_mp +1 !AJ : Is the +1 correct here, followig aero?
       ocean_bio_all(ks)  = hum                       ! humics
 
       end subroutine icepack_load_ocean_bio_array

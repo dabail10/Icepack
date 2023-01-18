@@ -647,7 +647,7 @@
          nlt_zaero          ! non-reacting layer aerosols
 
       integer (kind=int_kind), dimension(icepack_max_mp) :: &
-         nlt_zmp          ! non-reacting layer microplastics
+         nlt_zmp            ! non-reacting layer microplastics
 
       integer (kind=int_kind), dimension(icepack_max_algae) :: &
          nt_bgc_N , & ! diatoms, phaeocystis, pico/small
@@ -1825,7 +1825,7 @@
             enddo   ! mm
          endif      ! tr_zaero
 
-         ! z layer microplastics
+         ! z layer microplastics !AJ: Is this needed/correct?
          if (tr_zmp) then
             do mm = 1, n_zaero
                if (dEdd_algae) then

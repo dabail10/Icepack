@@ -170,7 +170,7 @@
     ! basal ice growth
     !-------------------------------------------------------------------
 
-      if (dhi_congel > c0) then    !AJ: IS THIS RIGHT? Adapted from iso but can't really follow
+      if (dhi_congel > c0) then    !AJ: IS THIS RIGHT? Adapted from iso but can't really follow what is happening
          do k = 1,n_mp
             sloss1 = c0
             sloss2 = c0
@@ -326,7 +326,7 @@
       else
          hs = c0
       endif
-      if (hs > hs_min) then    ! should this really be hs_min or 0?
+      if (hs > hs_min) then    ! AJ: should this really be hs_min or 0?
          ! should use same hs_min value as in radiation
          do k=1,n_mp
             mpsno(k,1) = mpsno(k,1) &
@@ -399,7 +399,7 @@
          mpsno(:,:) = c0
       endif
 
-      if (vicen > puny) then ! may want a limit on hi instead?
+      if (vicen > puny) then ! AJ: may want a limit on hi instead?
          do k = 1, n_mp
             sloss2 = c0
             dznew = min(dzssli_new-dzssli, c0)

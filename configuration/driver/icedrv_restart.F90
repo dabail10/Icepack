@@ -145,7 +145,7 @@
       if (tr_snow)      call write_restart_snow()      ! snow metamorphosis tracers
       if (tr_iso)       call write_restart_iso()       ! ice isotopes
       if (tr_aero)      call write_restart_aero()      ! ice aerosols
-      if (tr_mp)        call write_restart_mp()      ! ice microplastics
+      if (tr_mp)        call write_restart_mp()        ! ice microplastics
       if (tr_brine)     call write_restart_hbrine()    ! brine height
       if (tr_fsd)       call write_restart_fsd()       ! floe size distribution
 ! called in icedrv_RunMod.F90 to prevent circular dependencies
@@ -935,7 +935,7 @@
                 file=__FILE__,line= __LINE__)
 
             write(nu_diag,*) 'write_restart_mp (microplastics)'
-
+!AJ: Is this correct? What is the *4 about?
             do k = 1, n_mp
                call write_restart_field(nu_dump, trcrn(:,nt_mp  +(k-1)*4,:), ncat)
                call write_restart_field(nu_dump, trcrn(:,nt_mp+1+(k-1)*4,:), ncat)

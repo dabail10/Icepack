@@ -205,7 +205,7 @@
       real (kind=dbl_kind), dimension(2,icepack_max_aero) :: &
          pzaeros
       real (kind=dbl_kind), dimension(2,icepack_max_mp) :: &
-            pzmps
+         pzmps
       real (kind=dbl_kind), dimension(nblyr+1) :: &
          pNO, pAm, pPON, pzfswin, pZoo, phum
       real (kind=dbl_kind), dimension(nblyr+1,icepack_max_algae) :: &

@@ -507,7 +507,7 @@
         integer (kind=int_kind), dimension(:), intent(in), optional :: &
               nt_zmp_in,   & !  microplastics tracer
               nlt_zmp_in,  & !  microplastics tracer
-              nlt_zmp_sw_in  ! microplastics tracer in trcrn_sw
+              nlt_zmp_sw_in  !  microplastics tracer in trcrn_sw
 
 !autodocument_end
 
@@ -905,7 +905,7 @@
 
         integer (kind=int_kind), dimension(:), intent(out), optional :: &
               nt_zmp_out,   & !  microplastics tracers
-              nlt_zmp_out,  & !   microplastics tracers
+              nlt_zmp_out,  & !  microplastics tracers
               nlt_zmp_sw_out  !  microplastics tracers in trcrn_sw
 
 !autodocument_end

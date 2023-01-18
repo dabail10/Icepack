@@ -45,6 +45,9 @@
       real (kind=dbl_kind), dimension(nx,n_iso) :: &
          pdiso                ! change in mean isotope concentration
 
+      real (kind=dbl_kind), dimension(nx,n_mp) :: &
+            pdmp              ! change in mean microplastics concentration
+
 !=======================================================================
 
       contains
@@ -62,7 +65,8 @@
       use icedrv_arrays_column, only: floe_rad_c
       use icedrv_flux, only: evap, fsnow, frazil
       use icedrv_flux, only: fswabs, flw, flwout, fsens, fsurf, flat
-      use icedrv_flux, only: frain, fiso_evap, fiso_ocn, fiso_atm, fmp_ocn, fmp_atm
+      use icedrv_flux, only: frain, fiso_evap, fiso_ocn, fiso_atm
+      use icedrv_flux, only: fmp_ocn, fmp_atm, mp_ocn
       use icedrv_flux, only: Tair, Qa, fsw, fcondtop
       use icedrv_flux, only: meltt, meltb, meltl, snoice
       use icedrv_flux, only: dsnow, congel, sst, sss, Tf, fhocn
@@ -90,13 +94,14 @@
          rsnwavg, rhosavg, smicetot, smliqtot, smtot
 
       real (kind=dbl_kind), dimension (nx) :: &
-         work1, work2, work3
+         work1, work2, work3, work4
 
       real (kind=dbl_kind) :: &
          Tffresh, rhos, rhow, rhoi
 
       logical (kind=log_kind) :: tr_brine, tr_fsd, tr_iso, tr_mp, tr_snow
-      integer (kind=int_kind) :: nt_fbri, nt_Tsfc, nt_fsd, nt_isosno, nt_isoice, nt_mp
+      integer (kind=int_kind) :: nt_fbri, nt_Tsfc, nt_fsd, nt_isosno, nt_isoice
+      integer (kind=int_kind) :: nt_mp!, nt_mpsno, nt_mpice
       integer (kind=int_kind) :: nt_rsnw, nt_rhos, nt_smice, nt_smliq
 
       character(len=*), parameter :: subname='(runtime_diags)'
@@ -110,7 +115,8 @@
       call icepack_query_tracer_flags(tr_brine_out=tr_brine, &
            tr_fsd_out=tr_fsd,tr_iso_out=tr_iso, tr_mp_out=tr_mp,tr_snow_out=tr_snow)
       call icepack_query_tracer_indices(nt_fbri_out=nt_fbri, nt_Tsfc_out=nt_Tsfc,&
-           nt_fsd_out=nt_fsd, nt_mp_out=nt_mp, nt_isosno_out=nt_isosno, nt_isoice_out=nt_isoice, &
+           nt_fsd_out=nt_fsd, nt_mp_out=nt_mp, &
+           nt_isosno_out=nt_isosno, nt_isoice_out=nt_isoice, &
            nt_rsnw_out=nt_rsnw, nt_rhos_out=nt_rhos, &
            nt_smice_out=nt_smice, nt_smliq_out=nt_smliq)
       call icepack_query_parameters(Tffresh_out=Tffresh, rhos_out=rhos, &
@@ -190,6 +196,15 @@
            pdiso(n,k) = work3(n) - pdiso(n,k)
         enddo
 
+
+        work4(:) = c0
+
+        do k = 1, n_mp
+  !         work3 (n)  =  (trcr(n,nt_mpsno+k-1)*vsno(n) & !AJ: How to do this for nt_mp?
+  !                          +trcr(n,nt_mpice+k-1)*vice(n))
+  !         pdmp(n,k) = work4(n) - pdmp(n,k)
+        enddo
+
         !-----------------------------------------------------------------
         ! start spewing
         !-----------------------------------------------------------------
@@ -267,10 +282,15 @@
              write(nu_diag_out+n-1,901) 'isotopic conc chg    = ',pdiso(n,k),k
           enddo
         endif
-        if (tr_mp) then !AJ: ADD OUTOUT STUFF FOR MP
+        if (tr_mp) then !AJ: ADD OUTOUT FOR MP HERE.
+        write(nu_diag_out+n-1,*) '----------microplastic----------'
           do k = 1, n_mp
-             write(nu_diag_out+n-1,901) 'microplastic flux from atmos      = ',fmp_atm(n,k)*dt,k
-             write(nu_diag_out+n-1,901) 'microplastic flux to ocn = ',fmp_ocn(n,k)*dt,k
+             write(nu_diag_out+n-1,901) 'MP flux from atmos     = ',fmp_atm(n,k)*dt,k
+             write(nu_diag_out+n-1,901) 'MP flux to ocn         = ',fmp_ocn(n,k)*dt,k
+             write(nu_diag_out+n-1,901) 'MP flux from ocean     = ',mp_ocn(n,k)*dt,k
+             write(nu_diag_out+n-1,901) 'MP gain/loss           = ',(fmp_atm(n,k)-fmp_ocn(n,k)+mp_ocn(n,k))*dt,k
+!             write(nu_diag_out+n-1,901) 'MP conc chg            = ',pdmp(n,k),k
+
           enddo
         endif
       end do
@@ -290,7 +310,7 @@
 
       use icedrv_state, only: vice, vsno, trcr
 
-      integer (kind=int_kind) :: i, k, nt_isosno, nt_isoice, nt_mp
+      integer (kind=int_kind) :: i, k, nt_isosno, nt_isoice!, nt_mpsno, nt_mpice
 
       real (kind=dbl_kind), dimension (nx) :: work1
 
@@ -298,7 +318,8 @@
 
       call icepack_query_tracer_indices(nt_isosno_out=nt_isosno)
       call icepack_query_tracer_indices(nt_isoice_out=nt_isoice)
-      call icepack_query_tracer_indices(nt_mp_out=nt_mp)
+!      call icepack_query_tracer_indices(nt_mpsno_out=nt_mpsno)
+!      call icepack_query_tracer_indices(nt_mpice_out=nt_mpice)
 
       call total_energy (work1)
       do i = 1, nx
@@ -308,6 +329,10 @@
          do k = 1, n_iso
             pdiso(i,k) = (trcr(i,nt_isosno+k-1)*vsno(i) &
                          +trcr(i,nt_isoice+k-1)*vice(i))
+         enddo
+         do k = 1, n_mp
+!            pdmp(i,k) = (trcr(i,nt_mpsno+k-1)*vsno(i) & !AJ: How to do this for nt_mp?
+!                         +trcr(i,nt_mpice+k-1)*vice(i))
          enddo
       enddo
 
