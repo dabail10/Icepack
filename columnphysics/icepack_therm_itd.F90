@@ -1907,7 +1907,7 @@
 
             if (tr_mp) then
                do it=1,n_mp
-                 frazil_conc = c1
+                 frazil_conc = c0
 
                  trcrn(nt_mp+it-1,1) &
                    = (trcrn(nt_mp+it-1,1)*vice1) &
