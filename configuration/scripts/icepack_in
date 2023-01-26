@@ -26,12 +26,11 @@
     tr_iage      = .false.
     tr_FY        = .false.
     tr_lvl       = .true.
-    tr_pond_cesm = .false.
     tr_pond_topo = .false.
     tr_pond_lvl  = .true.
     tr_snow      = .false.
     tr_aero      = .false.
-    tr_mp        = .false.
+    tr_mp        = .true.
     tr_fsd       = .false.
     tr_iso       = .false.
 /
@@ -111,6 +110,8 @@
     update_ocn_f    = .false.
     l_mpond_fresh   = .false.
     tfrz_option     = 'mushy'
+    ice_ref_salinity = 4.0
+    saltflux_option = 'constant'
     oceanmixed_ice  = .true.
     wave_spec_type  = 'none'
     restore_ocn     = .false.

@@ -31,10 +31,10 @@
       use icepack_parameters, only: rhosi, sk_l, hs_ssl, min_salin, rsnw_fall
       use icepack_tracers,    only: nt_Tsfc, nt_qice, nt_qsno, nt_aero, nt_mp, nt_isosno, nt_isoice
       use icepack_tracers,    only: nt_apnd, nt_hpnd, nt_fbri, tr_brine, nt_bgc_S, bio_index
-      use icepack_tracers,    only: n_iso, tr_iso, tr_snow, nt_smice, nt_rsnw, nt_rhos
+      use icepack_tracers,    only: n_iso, tr_iso, tr_snow, nt_smice, nt_rsnw, nt_rhos, nt_sice
       use icepack_tracers,    only: icepack_compute_tracers
       use icepack_parameters, only: solve_zsal, skl_bgc, z_tracers
-      use icepack_parameters, only: kcatbound, kitd
+      use icepack_parameters, only: kcatbound, kitd, saltflux_option
       use icepack_therm_shared, only: Tmin, hi_min
       use icepack_warnings,   only: warnstr, icepack_warnings_add
       use icepack_warnings,   only: icepack_warnings_setabort, icepack_warnings_aborted
@@ -764,7 +764,6 @@
                               nbtrcr,      nblyr,      &
                               tr_aero,     tr_mp,      &
                               tr_pond_topo,            &
-                              heat_capacity,           &
                               first_ice,               &
                               trcr_depend, trcr_base,  &
                               n_trcr_strata,nt_strata, &
@@ -784,7 +783,6 @@
          nbtrcr, & ! number of bio tracers in use
          n_aero, & ! number of aerosol tracers
          n_mp      ! number of microplastics tracers
-
 
       real (kind=dbl_kind), intent(in) :: &
          dt        ! time step
@@ -818,8 +816,7 @@
       logical (kind=log_kind), intent(in) :: &
          tr_aero,      & ! aerosol flag
          tr_mp,        & ! microplastics flag
-         tr_pond_topo, & ! topo pond flag
-         heat_capacity   ! if false, ice and snow have zero heat capacity
+         tr_pond_topo    ! topo pond flag
 
       logical (kind=log_kind), dimension(ncat), intent(inout) :: &
          first_ice   ! For bgc and S tracers. set to true if zapping ice.
@@ -984,7 +981,7 @@
     !-------------------------------------------------------------------
 
       call zap_snow_temperature(dt,            ncat,     &
-                                heat_capacity, nblyr,    &
+                                nblyr,                   &
                                 nslyr,         aicen,    &
                                 trcrn,         vsnon,    &
                                 dfresh,        dfhocn,   &
@@ -1029,19 +1026,6 @@
       endif
       if (present(fzsal)) &
            fzsal        = fzsal         + dfzsal
-
-      !----------------------------------------------------------------
-      ! If using zero-layer model (no heat capacity), check that the
-      ! energy of snow and ice is correct.
-      !----------------------------------------------------------------
-
-      if ((.not. heat_capacity) .and. aice > puny) then
-         call zerolayer_check (ncat,       nilyr,    &
-                               nslyr,      aicen,    &
-                               vicen,      vsnon,    &
-                               trcrn)
-         if (icepack_warnings_aborted(subname)) return
-      endif
 
       end subroutine cleanup_itd
 
@@ -1128,7 +1112,7 @@
          n, k, it, & !counting indices
          blevels
 
-      real (kind=dbl_kind) :: xtmp      ! temporary variables
+      real (kind=dbl_kind) :: xtmp, sicen      ! temporary variables
       real (kind=dbl_kind) , dimension (1):: trcr_skl
       real (kind=dbl_kind) , dimension (nblyr+1):: bvol
 
@@ -1234,7 +1218,15 @@
             xtmp = (rhoi*vicen(n)) / dt
             dfresh = dfresh + xtmp
 
-            xtmp = rhoi*vicen(n)*ice_ref_salinity*p001 / dt
+            if (saltflux_option == 'prognostic') then
+               sicen = c0
+               do k=1,nilyr
+                  sicen = sicen + trcrn(nt_sice+k-1,n) / real(nilyr,kind=dbl_kind)
+               enddo
+               xtmp = rhoi*vicen(n)*sicen*p001 / dt
+            else
+               xtmp = rhoi*vicen(n)*ice_ref_salinity*p001 / dt
+            endif
             dfsalt = dfsalt + xtmp
 
             aice0 = aice0 + aicen(n)
@@ -1363,8 +1355,17 @@
                  * (aice-c1)/aice / dt
             dfresh = dfresh + xtmp
 
-            xtmp = rhoi*vicen(n)*ice_ref_salinity*p001 &
-                 * (aice-c1)/aice / dt
+            if (saltflux_option == 'prognostic') then
+               sicen = c0
+               do k=1,nilyr
+                  sicen = sicen + trcrn(nt_sice+k-1,n) / real(nilyr,kind=dbl_kind)
+               enddo
+               xtmp = rhoi*vicen(n)*sicen*p001 &
+                    * (aice-c1)/aice / dt
+            else
+               xtmp = rhoi*vicen(n)*ice_ref_salinity*p001 &
+                    * (aice-c1)/aice / dt
+            endif
             dfsalt = dfsalt + xtmp
 
             if (solve_zsal) then
@@ -1517,7 +1518,6 @@
 !=======================================================================
 
       subroutine zap_snow_temperature(dt,         ncat,     &
-                                      heat_capacity,        &
                                       nblyr,                &
                                       nslyr,      aicen,    &
                                       trcrn,      vsnon,    &
@@ -1538,9 +1538,6 @@
 
       real (kind=dbl_kind), intent(in) :: &
          dt           ! time step
-
-      logical (kind=log_kind), intent(in) :: &
-         heat_capacity   ! if false, ice and snow have zero heat capacity
 
       real (kind=dbl_kind), dimension (:), intent(in) :: &
          aicen        ! concentration of ice
@@ -1609,7 +1606,7 @@
          do k = 1, nslyr
 
             ! snow enthalpy and max temperature
-            if (hsn > hs_min .and. heat_capacity) then
+            if (hsn > hs_min) then
                ! zqsn < 0
                zqsn = trcrn(nt_qsno+k-1,n)
                Tmax = -zqsn*puny*rnslyr / (rhos*cp_ice*vsnon(n))
@@ -1660,144 +1657,6 @@
       enddo ! n
 
       end subroutine zap_snow_temperature
-
-!=======================================================================
-! Checks that the snow and ice energy in the zero layer thermodynamics
-! model still agrees with the snow and ice volume.
-! If there is an error, the model will abort.
-! This subroutine is only called if heat_capacity = .false.
-!
-! author: Alison McLaren, Met Office
-!         May 2010:  ECH replaced eicen, esnon with trcrn but did not test
-! the changes.  The loop below runs over n=1,ncat and I added loops
-! over k, making the test more stringent.
-
-      subroutine zerolayer_check (ncat,        nilyr,      &
-                                  nslyr,       aicen,      &
-                                  vicen,       vsnon,      &
-                                  trcrn)
-
-      integer (kind=int_kind), intent(in) :: &
-         ncat  , & ! number of thickness categories
-         nilyr , & ! number of ice layers
-         nslyr     ! number of snow layers
-
-      real (kind=dbl_kind), dimension (:), intent(inout) :: &
-         aicen , & ! concentration of ice
-         vicen , & ! volume per unit area of ice          (m)
-         vsnon     ! volume per unit area of snow         (m)
-
-      real (kind=dbl_kind), dimension (:,:), intent(inout) :: &
-         trcrn     ! ice tracers
-
-      ! local variables
-
-      integer (kind=int_kind) :: &
-         k     , & ! vertical index
-         n         ! category index
-
-      real (kind=dbl_kind) :: &
-         max_error ! max error in zero layer energy check
-                   ! (so max volume error = puny)
-
-      real (kind=dbl_kind), dimension (ncat) :: &
-         eicen     ! energy of melting for each ice layer (J/m^2)
-
-      real (kind=dbl_kind), dimension (ncat) :: &
-         esnon     ! energy of melting for each snow layer (J/m^2)
-
-      logical (kind=log_kind) :: &
-         ice_energy_correct  , & ! zero layer ice energy check
-         snow_energy_correct     ! zero layer snow energy check
-
-      real (kind=dbl_kind) :: &
-         worka, workb
-
-      character(len=*),parameter :: subname='(zerolayer_check)'
-
-      !-----------------------------------------------------------------
-      ! Initialize
-      !-----------------------------------------------------------------
-
-      max_error = puny*Lfresh*rhos ! max error in zero layer energy check
-                                   ! (so max volume error = puny)
-
-      !----------------------------------------------------------------
-      ! Calculate difference between ice and snow energies and the
-      ! energy values derived from the ice and snow volumes
-      !----------------------------------------------------------------
-
-      ice_energy_correct  = .true.
-      snow_energy_correct = .true.
-
-      worka = c0
-      workb = c0
-
-      do n = 1, ncat
-
-         eicen(n) = c0
-         do k = 1, nilyr
-            eicen(n) = eicen(n) + trcrn(nt_qice+k-1,n) &
-                     * vicen(n) / real(nilyr,kind=dbl_kind)
-         enddo
-         worka = eicen(n) + rhoi * Lfresh * vicen(n)
-         esnon(n) = c0
-         do k = 1, nslyr
-            esnon(n) = esnon(n) + trcrn(nt_qsno+k-1,n) &
-                     * vsnon(n) / real(nslyr,kind=dbl_kind)
-         enddo
-         workb = esnon(n) + rhos * Lfresh * vsnon(n)
-
-         if(abs(worka) > max_error) ice_energy_correct = .false.
-         if(abs(workb) > max_error) snow_energy_correct = .false.
-
-      !----------------------------------------------------------------
-      ! If there is a problem, abort with error message
-      !----------------------------------------------------------------
-
-         if (.not. ice_energy_correct) then
-
-            if (abs(worka) > max_error) then
-               call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
-               call icepack_warnings_add(subname//' zerolayer check - wrong ice energy')
-               write(warnstr,*) subname, 'n:', n
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'eicen =', eicen(n)
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'error=',  worka
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'vicen =', vicen(n)
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'aicen =', aicen(n)
-               call icepack_warnings_add(warnstr)
-            endif
-
-         endif
-         if (icepack_warnings_aborted(subname)) return
-
-         if (.not. snow_energy_correct) then
-
-            if (abs(workb) > max_error) then
-               call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
-               call icepack_warnings_add(subname//' zerolayer check - wrong snow energy')
-               write(warnstr,*) subname, 'n:', n
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'esnon =', esnon(n)
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'error=',  workb
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'vsnon =', vsnon(n)
-               call icepack_warnings_add(warnstr)
-               write(warnstr,*) subname, 'aicen =', aicen(n)
-               call icepack_warnings_add(warnstr)
-               return
-            endif
-
-         endif
-
-      enddo  ! ncat
-
-      end subroutine zerolayer_check
 
 !=======================================================================
 !autodocument_start icepack_init_itd

@@ -23,8 +23,8 @@
         n_aero    = NTRAERO   , & ! number of aerosols in use
         n_mp      = NTRMP     , & ! number of microplastic in use
         n_zaero   = TRZAERO   , & ! number of z aerosols in use
-        n_zmp     = TRZMP     , & ! number of z microplastic tracers in use
         n_algae   = TRALG     , & ! number of algae in use
+        n_zmp     = TRZMP     , & ! number of z microplastic tracers in use
         n_doc     = TRDOC     , & ! number of DOC pools in use
         n_dic     = TRDIC     , & ! number of DIC pools in use
         n_don     = TRDON     , & ! number of DON pools in use

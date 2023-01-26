@@ -389,7 +389,6 @@
       real (kind=dbl_kind), dimension (nx,icepack_max_mp), public :: &
          zmps            ! ocean microplastics (mmol/m^3)
 
-
 !=======================================================================
 
       contains

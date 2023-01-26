@@ -46,11 +46,11 @@
       use icepack_parameters, only: albocn, Timelt, snowpatch, awtvdr, awtidr, awtvdf, awtidf
       use icepack_parameters, only: kappav, hs_min, rhofresh, rhos, nspint, rsnw_fall, snwredist, rsnw_tmax
       use icepack_parameters, only: hi_ssl, hs_ssl, min_bgc, sk_l, snwlvlfac, snwgrain
-      use icepack_parameters, only: z_tracers, skl_bgc, calc_tsfc, shortwave, kalg, heat_capacity
+      use icepack_parameters, only: z_tracers, skl_bgc, calc_tsfc, shortwave, kalg
       use icepack_parameters, only: r_ice, r_pnd, r_snw, dt_mlt, rsnw_mlt, hs0, hs1, hp1
       use icepack_parameters, only: pndaspect, albedo_type, albicev, albicei, albsnowv, albsnowi, ahmax
       use icepack_tracers,    only: ntrcr, nbtrcr_sw
-      use icepack_tracers,    only: tr_pond_cesm, tr_pond_lvl, tr_pond_topo
+      use icepack_tracers,    only: tr_pond_lvl, tr_pond_topo
       use icepack_tracers,    only: tr_bgc_N, tr_aero
       use icepack_tracers,    only: nt_bgc_N, nt_zaero, tr_bgc_N
       use icepack_tracers,    only: tr_zaero, nlt_chl_sw, nlt_zaero_sw
@@ -91,7 +91,6 @@
                                   vsnon,    Tsfcn,    &
                                   swvdr,    swvdf,    &
                                   swidr,    swidf,    &
-                                  heat_capacity,      &
                                   albedo_type,        &
                                   albicev,  albicei,  &
                                   albsnowv, albsnowi, &
@@ -133,9 +132,6 @@
          albsnowv, & ! cold snow albedo, visible
          albsnowi, & ! cold snow albedo, near IR
          ahmax       ! thickness above which ice albedo is constant (m)
-
-      logical(kind=log_kind), intent(in) :: &
-         heat_capacity! if true, ice has nonzero heat capacity
 
       character (len=char_len), intent(in) :: &
          albedo_type  ! albedo parameterization, 'ccsm3' or 'constant'
@@ -286,8 +282,7 @@
       ! Compute solar radiation absorbed in ice and penetrating to ocean.
       !-----------------------------------------------------------------
 
-         call absorbed_solar  (heat_capacity,        &
-                               nilyr,                &
+         call absorbed_solar  (nilyr,                &
                                aicen(n),             &
                                vicen(n),             &
                                vsnon(n),             &
@@ -565,8 +560,7 @@
 ! authors William H. Lipscomb, LANL
 !         C. M. Bitz, UW
 
-      subroutine absorbed_solar (heat_capacity,      &
-                                 nilyr,    aicen,    &
+      subroutine absorbed_solar (nilyr,    aicen,    &
                                  vicen,    vsnon,    &
                                  swvdr,    swvdf,    &
                                  swidr,    swidf,    &
@@ -582,9 +576,6 @@
                                  fswthru_idf,        &
                                  fswpenl,            &
                                  Iswabs)
-
-      logical(kind=log_kind), intent(in) :: &
-         heat_capacity   ! if true, ice has nonzero heat capacity
 
       integer (kind=int_kind), intent(in) :: &
          nilyr           ! number of ice layers
@@ -732,22 +723,6 @@
          ! SW absorbed in ice interior
          fswint  = fswpen - fswthru
 
-      !----------------------------------------------------------------
-      ! if zero-layer model (no heat capacity), no SW is absorbed in ice
-      ! interior, so add to surface absorption
-      !----------------------------------------------------------------
-
-         if (.not. heat_capacity) then
-
-            ! SW absorbed at snow/ice surface
-            fswsfc = fswsfc + fswint
-
-            ! SW absorbed in ice interior (nilyr = 1)
-            fswint    = c0
-            Iswabs(1) = c0
-
-         endif                       ! heat_capacity
-
       end subroutine absorbed_solar
 
 ! End ccsm3 shortwave method
@@ -770,7 +745,6 @@
                           hpndn,    ipndn,     &
                           aeron,    kalg,      &
                           trcrn_bgcsw,         &
-                          heat_capacity,       &
                           tlat,     tlon,      &
                           calendar_type,       &
                           days_per_year,       &
@@ -814,7 +788,6 @@
          nslyr      ! number of snow layers
 
       logical(kind=log_kind), intent(in) :: &
-         heat_capacity,& ! if true, ice has nonzero heat capacity
          dEdd_algae,   & ! .true. use prognostic chla in dEdd
          modal_aero      ! .true. use modal aerosol treatment
 
@@ -951,7 +924,6 @@
          hmx         , & ! maximum available snow infiltration equivalent depth
          dhs         , & ! local difference in snow depth on sea ice and pond ice
          spn         , & ! snow depth on refrozen pond (m)
-         rnslyr      , & ! 1/nslyr
          tmp             ! 0 or 1
 
       logical (kind=log_kind) :: &
@@ -1011,22 +983,7 @@
             if (icepack_warnings_aborted(subname)) return
 
             ! set pond properties
-            if (tr_pond_cesm) then
-               ! fraction of ice area
-               fpn = apndn(n)
-               ! pond depth over fraction fpn
-               hpn = hpndn(n)
-               ! snow infiltration
-               if (hsn >= hs_min .and. hs0 > puny) then
-                  asnow = min(hsn/hs0, c1) ! delta-Eddington formulation
-                  fpn = (c1 - asnow) * fpn
-                  hpn = pndaspect * fpn
-               endif
-               ! Zero out fraction of thin ponds for radiation only
-               if (hpn < hpmin) fpn = c0
-               fsn = min(fsn, c1-fpn)
-               apeffn(n) = fpn ! for history
-            elseif (tr_pond_lvl) then
+            if (tr_pond_lvl) then
                hsnlvl = hsn ! initialize
                if (trim(snwredist) == 'bulk') then
                   hsnlvl = hsn / (c1 + snwlvlfac*(c1-alvln(n)))
@@ -1145,7 +1102,7 @@
 
          call shortwave_dEdd(dEdd_algae,                    &
                              nslyr,         nilyr,          &
-                             coszen,        heat_capacity,  &
+                             coszen,                        &
                              aicen(n),      vicen(n),       &
                              hsn,           fsn,            &
                              rhosnwn,       rsnwn,          &
@@ -1232,7 +1189,7 @@
 !
       subroutine shortwave_dEdd  (dEdd_algae,            &
                                   nslyr,    nilyr,       &
-                                  coszen,   heat_capacity,&
+                                  coszen,                &
                                   aice,     vice,        &
                                   hs,       fs,          &
                                   rhosnw,   rsnw,        &
@@ -1267,7 +1224,6 @@
          nslyr       ! number of snow layers
 
       logical (kind=log_kind), intent(in) :: &
-         heat_capacity, & ! if true, ice has nonzero heat capacity
          dEdd_algae,    & ! .true. use prognostic chla in dEdd
          modal_aero       ! .true. use modal aerosol treatment
 
@@ -1452,7 +1408,7 @@
                srftyp = 0
                call compute_dEdd(nilyr,       nslyr,   klev,   klevp,   &
                       zbio,      dEdd_algae,                            &
-                      heat_capacity,          fnidr,   coszen,          &
+                      fnidr,     coszen,                                &
                       R_ice,     R_pnd,                                 &
                       kaer_tab,    waer_tab,    gaer_tab,               &
                       kaer_bc_tab, waer_bc_tab, gaer_bc_tab,            &
@@ -1493,7 +1449,7 @@
                srftyp = 1
                call compute_dEdd(nilyr,       nslyr,   klev,   klevp,   &
                       zbio,      dEdd_algae,                            &
-                      heat_capacity,          fnidr,   coszen,          &
+                      fnidr,     coszen,                                &
                       R_ice,     R_pnd,                                 &
                       kaer_tab,    waer_tab,    gaer_tab,               &
                       kaer_bc_tab, waer_bc_tab, gaer_bc_tab,            &
@@ -1539,7 +1495,7 @@
                srftyp = 2
                call compute_dEdd(nilyr,       nslyr,   klev,   klevp,   &
                       zbio,      dEdd_algae,                            &
-                      heat_capacity,          fnidr,   coszen,          &
+                      fnidr,     coszen,                                &
                       R_ice,     R_pnd,                                 &
                       kaer_tab,    waer_tab,    gaer_tab,               &
                       kaer_bc_tab, waer_bc_tab, gaer_bc_tab,            &
@@ -1658,7 +1614,7 @@
 
       subroutine compute_dEdd (nilyr,    nslyr,    klev,  klevp,  &
                     zbio,     dEdd_algae,                         &
-                    heat_capacity,       fnidr,    coszen,        &
+                    fnidr,     coszen,                            &
                     R_ice,     R_pnd,                             &
                     kaer_tab,    waer_tab,         gaer_tab,      &
                     kaer_bc_tab, waer_bc_tab,      gaer_bc_tab,   &
@@ -1684,7 +1640,6 @@
                    ! (0 layer is included also)
 
       logical (kind=log_kind), intent(in) :: &
-         heat_capacity,& ! if true, ice has nonzero heat capacity
          dEdd_algae,   & ! .true. use prognostic chla in dEdd
          modal_aero      ! .true. use modal aerosol treatment
 
@@ -2001,8 +1956,8 @@
          gaer                     , & ! total aerosol asymmetry parameter
          swdr                     , & ! shortwave down at surface, direct  (W/m^2)
          swdf                     , & ! shortwave down at surface, diffuse (W/m^2)
-         rnilyr                   , & ! real(nilyr)
-         rnslyr                   , & ! real(nslyr)
+         rnilyr                   , & ! 1. / real(nilyr)
+         rnslyr                   , & ! 1. / real(nslyr)
          rns                      , & ! real(ns)
          tmp_0, tmp_ks, tmp_kl        ! temp variables
 
@@ -2193,7 +2148,7 @@
          fm_pnd = 0.50_dbl_kind    ! ponded ice fraction of scat coeff for - stn dev in alb
 
       real (kind=dbl_kind),  parameter :: &   !chla-specific absorption coefficient
-         kchl_tab = 0.01 !0.0023-0.0029 Perovich 1993, also 0.0067 m^2 (mg Chl)^-1
+         kchl_tab = p01  !0.0023-0.0029 Perovich 1993, also 0.0067 m^2 (mg Chl)^-1
                          ! found values of 0.006 to 0.023 m^2/ mg  (676 nm)  Neukermans 2014
                          ! and averages over the 300-700nm of 0.0075 m^2/mg in ice Fritsen (2011)
                          ! at 440nm values as high as 0.2 m^2/mg in under ice bloom (Balch 2014)
@@ -2387,13 +2342,13 @@
 
                  ! get grain size index:
                  ! works for 25 < snw_rds < 1625 um:
-                 if (tmp_gs < 125) then
-                   tmp1 = tmp_gs/50
+                 if (tmp_gs < 125._dbl_kind) then
+                   tmp1 = tmp_gs/(50._dbl_kind)
                    k_bcini(k) = nint(tmp1)
-                 elseif (tmp_gs < 175) then
+                 elseif (tmp_gs < 175._dbl_kind) then
                    k_bcini(k) = 2
                  else
-                   tmp1 = (tmp_gs/250)+2
+                   tmp1 = (tmp_gs/250._dbl_kind)+c2
                    k_bcini(k) = nint(tmp1)
                  endif
               else                  ! use the largest snow grain size for ice
@@ -2408,10 +2363,10 @@
               ! check bounds:
               if (k_bcini(k) < 1)  k_bcini(k) = 1
               if (k_bcini(k) > 8)  k_bcini(k) = 8
-              if (k_bcins(k) < 1)  k_bcins(k) = 1
-              if (k_bcins(k) > 10) k_bcins(k) = 10
-              if (k_bcexs(k) < 1)  k_bcexs(k) = 1
-              if (k_bcexs(k) > 10) k_bcexs(k) = 10
+!              if (k_bcins(k) < 1)  k_bcins(k) = 1
+!              if (k_bcins(k) > 10) k_bcins(k) = 10
+!              if (k_bcexs(k) < 1)  k_bcexs(k) = 1
+!              if (k_bcexs(k) > 10) k_bcexs(k) = 10
 
               ! print ice radius index:
               ! write(warnstr,*) subname, "MGFICE2:k, ice index= ",k,  k_bcini(k)
@@ -2537,12 +2492,10 @@
             ! aerosol in snow
              if (tr_zaero .and. dEdd_algae) then
                do k = 0,nslyr
-                  gzaer(ns,k) = gzaer(ns,k)/(wzaer(ns,k)+puny)
-                  wzaer(ns,k) = wzaer(ns,k)/(tzaer(ns,k)+puny)
-                  g(k)   = (g(k)*w0(k)*tau(k) + gzaer(ns,k)*wzaer(ns,k)*tzaer(ns,k)) / &
-                                  (w0(k)*tau(k) + wzaer(ns,k)*tzaer(ns,k))
-                  w0(k)  = (w0(k)*tau(k) + wzaer(ns,k)*tzaer(ns,k)) / &
-                                   (tau(k) + tzaer(ns,k))
+                  g(k)   = (g(k)*w0(k)*tau(k) + gzaer(ns,k)) / &
+                                (w0(k)*tau(k) + wzaer(ns,k))
+                  w0(k)  =      (w0(k)*tau(k) + wzaer(ns,k)) / &
+                                      (tau(k) + tzaer(ns,k))
                   tau(k) = tau(k) + tzaer(ns,k)
                enddo
              elseif (tr_aero) then
@@ -2598,8 +2551,11 @@
                endif  !modal_aero
 !mgf--
                enddo       ! na
-               gaer = gaer/(waer+puny)
-               waer = waer/(taer+puny)
+               g(k)   = (g(k)*w0(k)*tau(k) + gaer) / &
+                             (w0(k)*tau(k) + waer)
+               w0(k)  =      (w0(k)*tau(k) + waer) / &
+                                   (tau(k) + taer)
+               tau(k) = tau(k) + taer
 
                do k=1,nslyr
                   taer = c0
@@ -2611,34 +2567,34 @@
                     if (na==1) then
                       ! interstitial BC
                       taer = taer + &
-                           (aero_mp(na+1)/rnslyr)*kaer_bc_tab(ns,k_bcexs(k))
+                           (aero_mp(na+1)*rnslyr)*kaer_bc_tab(ns,k_bcexs(k))
                       waer = waer + &
-                           (aero_mp(na+1)/rnslyr)*kaer_bc_tab(ns,k_bcexs(k))* &
+                           (aero_mp(na+1)*rnslyr)*kaer_bc_tab(ns,k_bcexs(k))* &
                            waer_bc_tab(ns,k_bcexs(k))
                       gaer = gaer + &
-                           (aero_mp(na+1)/rnslyr)*kaer_bc_tab(ns,k_bcexs(k))* &
+                           (aero_mp(na+1)*rnslyr)*kaer_bc_tab(ns,k_bcexs(k))* &
                            waer_bc_tab(ns,k_bcexs(k))*gaer_bc_tab(ns,k_bcexs(k))
                     elseif (na==5) then
                       ! within-ice BC
                       taer = taer + &
-                           (aero_mp(na+1)/rnslyr)*kaer_bc_tab(ns,k_bcins(k))*&
+                           (aero_mp(na+1)*rnslyr)*kaer_bc_tab(ns,k_bcins(k))*&
                            bcenh(ns,k_bcins(k),k_bcini(k))
                       waer = waer + &
-                           (aero_mp(na+1)/rnslyr)*kaer_bc_tab(ns,k_bcins(k))* &
+                           (aero_mp(na+1)*rnslyr)*kaer_bc_tab(ns,k_bcins(k))* &
                            waer_bc_tab(ns,k_bcins(k))
                       gaer = gaer + &
-                           (aero_mp(na+1)/rnslyr)*kaer_bc_tab(ns,k_bcins(k))* &
+                           (aero_mp(na+1)*rnslyr)*kaer_bc_tab(ns,k_bcins(k))* &
                            waer_bc_tab(ns,k_bcins(k))*gaer_bc_tab(ns,k_bcins(k))
 
                     else
                       ! other species (dust)
                       taer = taer + &
-                           (aero_mp(na+1)/rnslyr)*kaer_tab(ns,(1+(na-1)/4))
+                           (aero_mp(na+1)*rnslyr)*kaer_tab(ns,(1+(na-1)/4))
                       waer = waer + &
-                           (aero_mp(na+1)/rnslyr)*kaer_tab(ns,(1+(na-1)/4))* &
+                           (aero_mp(na+1)*rnslyr)*kaer_tab(ns,(1+(na-1)/4))* &
                            waer_tab(ns,(1+(na-1)/4))
                       gaer = gaer + &
-                           (aero_mp(na+1)/rnslyr)*kaer_tab(ns,(1+(na-1)/4))* &
+                           (aero_mp(na+1)*rnslyr)*kaer_tab(ns,(1+(na-1)/4))* &
                            waer_tab(ns,(1+(na-1)/4))*gaer_tab(ns,(1+(na-1)/4))
                     endif   !(na==1)
 
@@ -2654,12 +2610,10 @@
                   endif       ! modal_aero
 !mgf--
                   enddo       ! na
-                  gaer = gaer/(waer+puny)
-                  waer = waer/(taer+puny)
-                  g(k)   = (g(k)*w0(k)*tau(k) + gaer*waer*taer) / &
-                           (w0(k)*tau(k) + waer*taer)
-                  w0(k)  = (w0(k)*tau(k) + waer*taer) / &
-                           (tau(k) + taer)
+                  g(k)   = (g(k)*w0(k)*tau(k) + gaer) / &
+                                (w0(k)*tau(k) + waer)
+                  w0(k)  =      (w0(k)*tau(k) + waer) / &
+                                      (tau(k) + taer)
                   tau(k) = tau(k) + taer
                enddo       ! k
             endif     ! tr_aero
@@ -2667,7 +2621,7 @@
             ! pond
          else !if( srftyp == 2 ) then
             ! pond water layers evenly spaced
-            dz = hp/(c1/rnslyr+c1)
+            dz = hp/(real(nslyr,kind=dbl_kind)+c1)
             do k=0,nslyr
                tau(k) = kw(ns)*dz
                w0(k)  = ww(ns)
@@ -2688,7 +2642,7 @@
             ! dl
             k = kii + 1
             ! scale dz for dl relative to 4 even-layer-thickness 1.5m case
-            fs = p25/rnilyr
+            fs = p25*real(nilyr,kind=dbl_kind)
             tau(k) = (ki_dl(ns) + kabs_chl(ns,k)) *dzk(k)*fs
             w0(k)  = ki_dl(ns)/(ki_dl(ns) + kabs_chl(ns,k)) *wi_dl(ns)
             g(k)   = gi_dl(ns)
@@ -2716,12 +2670,10 @@
             ! aerosol in sea ice
             if (tr_zaero .and. dEdd_algae) then
                do k = kii, klev
-                  gzaer(ns,k) = gzaer(ns,k)/(wzaer(ns,k)+puny)
-                  wzaer(ns,k) = wzaer(ns,k)/(tzaer(ns,k)+puny)
-                  g(k)   = (g(k)*w0(k)*tau(k) + gzaer(ns,k)*wzaer(ns,k)*tzaer(ns,k)) / &
-                                  (w0(k)*tau(k) + wzaer(ns,k)*tzaer(ns,k))
-                  w0(k)  = (w0(k)*tau(k) + wzaer(ns,k)*tzaer(ns,k)) / &
-                                   (tau(k) + tzaer(ns,k))
+                  g(k)   = (g(k)*w0(k)*tau(k) + gzaer(ns,k)) / &
+                                (w0(k)*tau(k) + wzaer(ns,k))
+                  w0(k)  =      (w0(k)*tau(k) + wzaer(ns,k)) / &
+                                      (tau(k) + tzaer(ns,k))
                   tau(k) = tau(k) + tzaer(ns,k)
                enddo
             elseif (tr_aero) then
@@ -2776,14 +2728,12 @@
                 endif     ! modal_aero
 !mgf--
                enddo      ! na
-
-               gaer = gaer/(waer+puny)
-               waer = waer/(taer+puny)
-               g(k)   = (g(k)*w0(k)*tau(k) + gaer*waer*taer) / &
-                    (w0(k)*tau(k) + waer*taer)
-               w0(k)  = (w0(k)*tau(k) + waer*taer) / &
-                    (tau(k) + taer)
+               g(k)   = (g(k)*w0(k)*tau(k) + gaer) / &
+                             (w0(k)*tau(k) + waer)
+               w0(k)  =      (w0(k)*tau(k) + waer) / &
+                                   (tau(k) + taer)
                tau(k) = tau(k) + taer
+
                do k = kii+1, klev
                   taer = c0
                   waer = c0
@@ -2794,34 +2744,34 @@
                      if (na==1) then
                         ! interstitial BC
                         taer = taer + &
-                             (aero_mp(na+3)/rnilyr)*kaer_bc_tab(ns,k_bcexs(k))
+                             (aero_mp(na+3)*rnilyr)*kaer_bc_tab(ns,k_bcexs(k))
                         waer = waer + &
-                             (aero_mp(na+3)/rnilyr)*kaer_bc_tab(ns,k_bcexs(k))* &
+                             (aero_mp(na+3)*rnilyr)*kaer_bc_tab(ns,k_bcexs(k))* &
                              waer_bc_tab(ns,k_bcexs(k))
                         gaer = gaer + &
-                             (aero_mp(na+3)/rnilyr)*kaer_bc_tab(ns,k_bcexs(k))* &
+                             (aero_mp(na+3)*rnilyr)*kaer_bc_tab(ns,k_bcexs(k))* &
                              waer_bc_tab(ns,k_bcexs(k))*gaer_bc_tab(ns,k_bcexs(k))
                      elseif (na==5) then
                         ! within-ice BC
                         taer = taer + &
-                             (aero_mp(na+3)/rnilyr)*kaer_bc_tab(ns,k_bcins(k))* &
+                             (aero_mp(na+3)*rnilyr)*kaer_bc_tab(ns,k_bcins(k))* &
                              bcenh(ns,k_bcins(k),k_bcini(k))
                         waer = waer + &
-                             (aero_mp(na+3)/rnilyr)*kaer_bc_tab(ns,k_bcins(k))* &
+                             (aero_mp(na+3)*rnilyr)*kaer_bc_tab(ns,k_bcins(k))* &
                              waer_bc_tab(ns,k_bcins(k))
                         gaer = gaer + &
-                             (aero_mp(na+3)/rnilyr)*kaer_bc_tab(ns,k_bcins(k))* &
+                             (aero_mp(na+3)*rnilyr)*kaer_bc_tab(ns,k_bcins(k))* &
                              waer_bc_tab(ns,k_bcins(k))*gaer_bc_tab(ns,k_bcins(k))
 
                      else
                         ! other species (dust)
                         taer = taer + &
-                             (aero_mp(na+3)/rnilyr)*kaer_tab(ns,(1+(na-1)/4))
+                             (aero_mp(na+3)*rnilyr)*kaer_tab(ns,(1+(na-1)/4))
                         waer = waer + &
-                             (aero_mp(na+3)/rnilyr)*kaer_tab(ns,(1+(na-1)/4))* &
+                             (aero_mp(na+3)*rnilyr)*kaer_tab(ns,(1+(na-1)/4))* &
                              waer_tab(ns,(1+(na-1)/4))
                         gaer = gaer + &
-                             (aero_mp(na+3)/rnilyr)*kaer_tab(ns,(1+(na-1)/4))* &
+                             (aero_mp(na+3)*rnilyr)*kaer_tab(ns,(1+(na-1)/4))* &
                              waer_tab(ns,(1+(na-1)/4))*gaer_tab(ns,(1+(na-1)/4))
                      endif
                   else       !bulk
@@ -2837,12 +2787,10 @@
                   endif       ! modal_aero
 !mgf--
                   enddo       ! na
-                  gaer = gaer/(waer+puny)
-                  waer = waer/(taer+puny)
-                  g(k)   = (g(k)*w0(k)*tau(k) + gaer*waer*taer) / &
-                           (w0(k)*tau(k) + waer*taer)
-                  w0(k)  = (w0(k)*tau(k) + waer*taer) / &
-                           (tau(k) + taer)
+                  g(k)   = (g(k)*w0(k)*tau(k) + gaer) / &
+                                (w0(k)*tau(k) + waer)
+                  w0(k)  =      (w0(k)*tau(k) + waer) / &
+                                      (tau(k) + taer)
                   tau(k) = tau(k) + taer
                enddo ! k
             endif ! tr_aero
@@ -2876,7 +2824,7 @@
                g(k)  = gi_p_int(ns)
                k = kii + 1
                ! scale dz for dl relative to 4 even-layer-thickness 1.5m case
-               fs = p25/rnilyr
+               fs = p25*real(nilyr,kind=dbl_kind)
                sig_i      = ki_dl(ns)*wi_dl(ns)*fs
                sig_p      = ki_p_int(ns)*wi_p_int(ns)
                sig        = sig_i + (sig_p-sig_i)*(hp/hp0)
@@ -3109,28 +3057,8 @@
 
          ! bgc layer
          fswpenl(k) = fswpenl(k) + fthrul(k)* fi
-         if (k == nilyr) then
-            fswpenl(k+1) = fswpenl(k+1) + fthrul(k+1)*fi
-         endif
       enddo                     ! k
-
-      !----------------------------------------------------------------
-      ! if ice has zero heat capacity, no SW can be absorbed
-      ! in the ice/snow interior, so add to surface absorption.
-      ! Note: nilyr = nslyr = 1 for this case
-      !----------------------------------------------------------------
-
-      if (.not. heat_capacity) then
-
-         ! SW absorbed at snow/ice surface
-         fswsfc = fswsfc + Iswabs(1) + Sswabs(1)
-
-         ! SW absorbed in ice interior
-         fswint   = c0
-         Iswabs(1) = c0
-         Sswabs(1) = c0
-
-      endif                       ! heat_capacity
+      fswpenl(nilyr+1) = fswpenl(nilyr+1) + fthrul(nilyr+1)*fi
 
       end subroutine compute_dEdd
 
@@ -3664,7 +3592,7 @@
 
          do ks = 1, nslyr
             rsnw(ks)   = max(rsnw_fall,rsnow(ks))
-            rsnw(ks)   = min(rsnw_tmax,rsnow(ks))
+            rsnw(ks)   = min(rsnw_tmax,rsnw (ks))
             rhosnw(ks) = rhos
          enddo
 
@@ -3818,7 +3746,7 @@
          do k = 1, nblyr+1
             do n = 1, n_algae
                trtmp0(nt_bgc_N(1) + k-1) = trtmp0(nt_bgc_N(1) + k-1) + &
-                                R_chl2N(n)*F_abs_chl(n)*bgcN(nt_bgc_N(n)-nt_bgc_N(1)+1 + k-1)
+                                R_chl2N(n)*F_abs_chl(n)*bgcN(nt_bgc_N(n)-nt_bgc_N(1)+k)
             enddo ! n
          enddo    ! k
 
@@ -4263,7 +4191,6 @@
                           hpndn,        ipndn,          &
                           aeron,        kalg,           &
                           trcrn_bgcsw,                  &
-                          heat_capacity,                &
                           TLAT,         TLON,           &
                           calendar_type,days_per_year,  &
                           nextsw_cday,  yday,           &
@@ -4312,7 +4239,6 @@
                                  Tsfcn,                  &
                                  swvdr,      swvdf,      &
                                  swidr,      swidf,      &
-                                 heat_capacity,          &
                                  albedo_type,            &
                                  albicev,    albicei,    &
                                  albsnowv,   albsnowi,   &
