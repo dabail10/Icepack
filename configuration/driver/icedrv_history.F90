@@ -22,7 +22,8 @@
 
       ! history output file info
 
-      logical (kind=log_kind), public :: history_cdf      ! flag to turn on cdf history files
+      character (len=char_len), public :: &
+         history_format                           ! format of history files, only supported type is 'nc'
 
       character (len=char_len_long) :: hist_file  ! hist file name
 
@@ -40,7 +41,7 @@
 
       subroutine history_write()
 
-      use icedrv_calendar, only: idate0, days_per_year, use_leap_years
+      use icedrv_calendar, only: days_per_year, use_leap_years, year_init
       use icedrv_calendar, only: time, time0, secday, istep1, idate, sec
       use icedrv_state, only: aice, vice, vsno, uvel, vvel, divu, shear, strength
       use icedrv_state, only: trcr, trcrn
@@ -164,9 +165,8 @@
          if (status /= nf90_noerr) call icedrv_system_abort(string=subname//' ERROR: def_var time')
          status = nf90_put_att(ncid,varid,'long_name','model time')
          if (status /= nf90_noerr) call icedrv_system_abort(string=subname//' ERROR: put_att time long_name')
-         write(cdate,'(i8.8)') idate0
-         write(tmpstr,'(a,a,a,a,a,a,a,a)') 'days since ', &
-            cdate(1:4),'-',cdate(5:6),'-',cdate(7:8),' 00:00:00'
+         write(tmpstr,'(a,i0,a)') 'days since ', &
+            year_init,'-01-01 00:00:00'
          status = nf90_put_att(ncid,varid,'units',trim(tmpstr))
          if (status /= nf90_noerr) call icedrv_system_abort(string=subname//' ERROR: put_att time units')
          if (days_per_year == 360) then
@@ -282,7 +282,7 @@
 
       status = nf90_inq_varid(ncid,'time',varid)
       if (status /= nf90_noerr) call icedrv_system_abort(string=subname//' ERROR: inq_var '//'time')
-      value = (time-time0)/secday
+      value = time/secday
       status = nf90_put_var(ncid,varid,value,start=(/timcnt/))
       if (status /= nf90_noerr) call icedrv_system_abort(string=subname//' ERROR: put_var '//'time')
 

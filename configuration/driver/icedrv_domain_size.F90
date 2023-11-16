@@ -36,10 +36,9 @@
                                   ! *** add to kscavz in icepack_zbgc_shared.F90
         n_bgc     = (n_algae*2 + n_doc + n_dic + n_don + n_fed + n_fep + n_zaero + n_zmp &
                   + 8)        , & ! nit, am, sil, dmspp, dmspd, dms, pon, humic
-        nltrcr    = (n_bgc*TRBGCZ+TRZS)*TRBRI, & ! number of zbgc (includes zaero and zmp)
-                                                 ! and zsalinity tracers
-        max_nsw   = (nilyr+nslyr+2) & ! total chlorophyll plus aerosols and microplastics
-                  * (1+TRZAERO+TRZMP),& ! number of tracers active in shortwave calculation
+        nltrcr    = (n_bgc*TRBGCZ)*TRBRI, & ! number of zbgc (includes zaero)
+        max_nsw   = (nilyr+nslyr+2) & ! total chlorophyll plus aerosols
+                  * (1+TRZAERO),& ! number of tracers active in shortwave calculation
         max_ntrcr =   1         & ! 1 = surface temperature
                   + nilyr       & ! ice salinity
                   + nilyr       & ! ice enthalpy
@@ -56,7 +55,6 @@
                   + n_mp*4      & ! number of microplastics * 4 aero layers
                   + TRBRI       & ! brine height
                   + TRBGCS*n_bgc           & ! skeletal layer BGC
-                  + TRZS  *TRBRI* nblyr    & ! zsalinity  (off if TRBRI=0)
                   + n_bgc*TRBGCZ*TRBRI*(nblyr+3) & ! zbgc (off if TRBRI=0)
                   + n_bgc*TRBGCZ           & ! mobile/stationary phase tracer
                   + 1             ! for unused tracer flags

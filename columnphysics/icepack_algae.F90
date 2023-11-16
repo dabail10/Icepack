@@ -175,13 +175,10 @@
          icgrid     , & ! CICE interface coordinate
          fswthrul       ! visible short wave radiation on icgrid (W/m^2)
 
-      real (kind=dbl_kind), dimension(nbtrcr), &
-         intent(in) :: &
+      real (kind=dbl_kind), dimension(nbtrcr), intent(in) :: &
          flux_bio_atm   ! aerosol/bgc deposition rate (mmol/m^2 s)
 
-
-      real (kind=dbl_kind), dimension(ntrcr), &
-         intent(inout) :: &
+      real (kind=dbl_kind), dimension(ntrcr), intent(inout) :: &
          trcrn
 
       real (kind=dbl_kind), dimension (nblyr+1), intent(inout) :: &
@@ -2214,8 +2211,7 @@
          bphin_N, &      ! Porosity with min condition on igrid
          bgrid
 
-      real (kind=dbl_kind), dimension (nblyr+1), &
-         intent(out) :: &
+      real (kind=dbl_kind), dimension (nblyr+1), intent(out) :: &
          sbdiag      , & ! sub-diagonal matrix elements
          diag        , & ! diagonal matrix elements
          spdiag      , & ! super-diagonal matrix elements
@@ -2401,8 +2397,7 @@
       real (kind=dbl_kind), intent(in) :: &
          dt              ! time step
 
-      real (kind=dbl_kind), dimension (nblyr+1), &
-         intent(in) :: &
+      real (kind=dbl_kind), dimension (nblyr+1), intent(in) :: &
          D_sbdiag      , & ! sub-diagonal artificial diffusion matrix elements
          ML            , & ! Lumped mass diagonal matrix elements
          D_spdiag          ! super-diagonal artificial diffusion matrix elements

@@ -57,10 +57,8 @@ setenv NTRMP     0         # number of microplastics  tracers
                           # (up to max_mp in ice_domain_size.F90)
 setenv NTRISO    0         # number of isotopes (up to max_iso)
 setenv TRBRI     0         # set to 1 for brine height tracer
-setenv TRZS      0         # set to 1 for zsalinity tracer
-                           # (needs TRBRI = 1)
-setenv TRBGCS    0         # set to 1 for skeletal layer tracers
-                           # (needs TRBGCZ = 0)
+setenv TRBGCS    0         # set to 1 for skeletal layer tracers  
+                           # (needs TRBGCZ = 0) 
 setenv TRBGCZ    0         # set to 1 for zbgc tracers
                            # (needs TRBGCS = 0 and TRBRI = 1)
 setenv NBGCLYR   1         # number of zbgc layers
@@ -82,5 +80,6 @@ setenv TRFED     0         # number of dissolved iron tracers
                            # (up to max_fe  = 2)
 
 ### Specialty code
+setenv ICE_SNICARHC  false  # include hardcoded (HC) snicar tables
 setenv ICE_BLDDEBUG  false  # build debug flags
-setenv ICE_COVERAGE  false   # code coverage flag
+setenv ICE_COVERAGE  false  # code coverage flag

@@ -19,7 +19,6 @@
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
       use icepack_intfc, only: icepack_query_parameters
       use icepack_intfc, only: icepack_query_tracer_flags, icepack_query_tracer_indices
-      use icepack_intfc, only: icepack_query_parameters
       use icedrv_system, only: icedrv_system_abort
 
       implicit none
@@ -197,7 +196,6 @@
          scale_factor! scaling factor for shortwave components
 
       logical (kind=log_kind), public :: &
-         update_ocn_f, & ! if true, update fresh water and salt fluxes
          l_mpond_fresh   ! if true, include freshwater feedback from meltponds
                          ! when running in ice-ocean or coupled configuration
 
@@ -280,6 +278,7 @@
       real (kind=dbl_kind), dimension (nx), public :: &
          rside   , & ! fraction of ice that melts laterally
          fside   , & ! lateral heat flux (W/m^2)
+         wlat    , & ! lateral melt rate (m/s)
          fsw     , & ! incoming shortwave radiation (W/m^2)
          coszen  , & ! cosine solar zenith angle, < 0 for sun below horizon
          rdg_conv, & ! convergence term for ridging (1/s)
@@ -334,10 +333,6 @@
          dimension (nx,icepack_max_nbtrcr), public :: &
          flux_bio   , & ! all bio fluxes to ocean
          flux_bio_ai    ! all bio fluxes to ocean, averaged over grid cell
-
-      real (kind=dbl_kind), dimension (nx), public :: &
-         fzsal_ai, & ! salt flux to ocean from zsalinity (kg/m^2/s)
-         fzsal_g_ai  ! gravity drainage salt flux to ocean (kg/m^2/s)
 
       ! internal
 
@@ -802,7 +797,7 @@
 
       use icedrv_arrays_column, only: PP_net, grow_net, hbri
       use icedrv_arrays_column, only: ice_bio_net, snow_bio_net, fbio_snoice, fbio_atmice
-      use icedrv_arrays_column, only: fzsal, fzsal_g, zfswin
+      use icedrv_arrays_column, only: zfswin
       character(len=*), parameter :: subname='(init_history_bgc)'
 
       PP_net        (:) = c0
@@ -814,8 +809,6 @@
       snow_bio_net(:,:) = c0
       fbio_snoice (:,:) = c0
       fbio_atmice (:,:) = c0
-      fzsal         (:) = c0
-      fzsal_g       (:) = c0
       zfswin    (:,:,:) = c0
       fnit          (:) = c0
       fsil          (:) = c0
