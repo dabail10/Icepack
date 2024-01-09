@@ -844,7 +844,7 @@
       real (kind=dbl_kind), dimension (:), intent(inout), optional :: &
          fmp_ocn    ! microplastics flux to ocean     (kg/m^2/s)
 
-      real (kind=dbl_kind), dimension (:), intent(inout) :: &
+      real (kind=dbl_kind), dimension (:), intent(inout), optional :: &
          fiso_ocn     ! isotope flux to ocean     (kg/m^2/s)
 
       logical (kind=log_kind), intent(in), optional ::   &
