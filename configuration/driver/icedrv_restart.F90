@@ -1091,11 +1091,14 @@
       !         David Bailey, NCAR
 
 
-            subroutine write_restart_mp()
+            subroutine write_restart_mp(dims)
 
             use icedrv_domain_size, only: n_mp
             use icedrv_state, only: trcrn
             use icedrv_domain_size, only: ncat
+
+            integer (kind=int_kind), intent(in), optional :: &
+                dims(:)           ! netcdf dimension IDs
 
             ! local variables
 

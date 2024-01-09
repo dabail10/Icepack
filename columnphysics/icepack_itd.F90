@@ -774,8 +774,9 @@
                               n_trcr_strata,nt_strata, &
                               fpond,       fresh,      &
                               fsalt,       fhocn,      &
-                              faero_ocn,   fmp_ocn, fiso_ocn,   &
-                              flux_bio,    Tf, limit_aice_in)
+                              faero_ocn,   fmp_ocn,    &
+                              fiso_ocn,    flux_bio,   &
+                              Tf, limit_aice_in)
 
       integer (kind=int_kind), intent(in) :: &
          ncat  , & ! number of thickness categories
@@ -1050,8 +1051,9 @@
                                   dfpond,                  &
                                   dfresh,    dfsalt,       &
                                   dfhocn,                  &
-                                  dfaero_ocn, dfmp_ocn, dfiso_ocn,   &
-                                  tr_aero, tr_mp,                 &
+                                  dfaero_ocn, dfmp_ocn,    &
+                                  dfiso_ocn,               &
+                                  tr_aero, tr_mp,          &
                                   tr_pond_topo,            &
                                   first_ice, nbtrcr,       &
                                   dflux_bio, Tf            )

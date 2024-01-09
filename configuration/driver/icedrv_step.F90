@@ -924,7 +924,7 @@
                          dvirdgdt=dvirdgdt(i),     opening=opening(i),       &
                          fpond=fpond(i),                                     &
                          fresh=fresh(i),           fhocn=fhocn(i),           &
-                         n_aero=n_aero,            n_mp=n_mp,                 &
+                         n_aero=n_aero,            n_mp=n_mp,                &
                          faero_ocn=faero_ocn(i,:), fmp_ocn=fmp_ocn(i,:),     &
                          fiso_ocn=fiso_ocn(i,:),                             &
                          aparticn=aparticn(i,:),   krdgn=krdgn(i,:),         &
