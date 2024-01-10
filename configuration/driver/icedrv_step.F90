@@ -477,7 +477,7 @@
                                     nltrcr, nx, nfsd
       use icedrv_flux, only: fresh, frain, fpond, frzmlt, frazil, frz_onset
       use icedrv_flux, only: fsalt, Tf, sss, salinz, fhocn, rside, fside, wlat
-      use icedrv_flux, only: meltl, frazil_diag, flux_bio, faero_ocn, fiso_ocn
+      use icedrv_flux, only: meltl, frazil_diag, flux_bio, faero_ocn, fiso_ocn, fmp_ocn
       use icedrv_flux, only: HDO_ocn, H2_16O_ocn, H2_18O_ocn
       use icedrv_init, only: tmask
       use icedrv_state, only: aice, aicen, aice0, trcr_depend
