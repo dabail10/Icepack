@@ -511,7 +511,7 @@
       H2_16O_ocn(:) = c0
       H2_18O_ocn(:) = c0
 
-      ! microplastics from ocean
+      ! microplastics concentration in ocean
       mp_ocn   (:,:) = c0
 
       do i = 1, nx

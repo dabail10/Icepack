@@ -93,6 +93,8 @@
          nt_isoice    = 0, & ! starting index for isotopes in ice
          nt_aero      = 0, & ! starting index for aerosols in ice
          nt_mp        = 0, & ! starting index for microplastics in ice
+         nt_mpsno     = 0, & ! starting index for microplastics in snow
+         nt_mpice     = 0, & ! starting index for microplastics in ice
          nt_bgc_Nit   = 0, & ! nutrients
          nt_bgc_Am    = 0, & !
          nt_bgc_Sil   = 0, & !
@@ -410,7 +412,8 @@
            nt_alvl_in, nt_vlvl_in, nt_apnd_in, nt_hpnd_in, nt_ipnd_in, &
            nt_smice_in, nt_smliq_in, nt_rhos_in, nt_rsnw_in, &
            nt_fsd_in, nt_isosno_in, nt_isoice_in, &
-           nt_aero_in, nt_mp_in, nt_zaero_in, nt_zmp_in, nt_bgc_C_in, &
+           nt_aero_in, nt_mp_in, nt_mpsno_in, nt_mpice_in, &
+           nt_zaero_in, nt_zmp_in, nt_bgc_C_in, &
            nt_bgc_N_in, nt_bgc_chl_in, nt_bgc_DOC_in, nt_bgc_DON_in, &
            nt_bgc_DIC_in, nt_bgc_Fed_in, nt_bgc_Fep_in, nt_bgc_Nit_in, nt_bgc_Am_in, &
            nt_bgc_Sil_in, nt_bgc_DMSPp_in, nt_bgc_DMSPd_in, nt_bgc_DMS_in, nt_bgc_hum_in, &
@@ -444,6 +447,8 @@
              nt_isoice_in,  & ! starting index for isotopes in ice
              nt_aero_in,    & ! starting index for aerosols in ice
              nt_mp_in,      & ! starting index for microplastics in ice
+             nt_mpsno_in,  & ! starting index for microplastics in snow
+             nt_mpice_in,  & ! starting index for microplastics in ice
              nt_bgc_Nit_in, & ! nutrients
              nt_bgc_Am_in,  & !
              nt_bgc_Sil_in, & !
@@ -531,6 +536,8 @@
         if (present(nt_isoice_in)    ) nt_isoice     = nt_isoice_in
         if (present(nt_aero_in)      ) nt_aero       = nt_aero_in
         if (present(nt_mp_in)        ) nt_mp         = nt_mp_in
+        if (present(nt_mpsno_in)     ) nt_mpsno      = nt_mpsno_in
+        if (present(nt_mpice_in)     ) nt_mpice      = nt_mpice_in
         if (present(nt_bgc_Nit_in)   ) nt_bgc_Nit    = nt_bgc_Nit_in
         if (present(nt_bgc_Am_in)    ) nt_bgc_Am     = nt_bgc_Am_in
         if (present(nt_bgc_Sil_in)   ) nt_bgc_Sil    = nt_bgc_Sil_in
@@ -809,7 +816,8 @@
            nt_alvl_out, nt_vlvl_out, nt_apnd_out, nt_hpnd_out, nt_ipnd_out, &
            nt_smice_out, nt_smliq_out, nt_rhos_out, nt_rsnw_out, &
            nt_fsd_out, nt_isosno_out, nt_isoice_out, &
-           nt_aero_out, nt_mp_out, nt_zaero_out, nt_zmp_out, nt_bgc_C_out, &
+           nt_aero_out, nt_mp_out, nt_mpsno_out, nt_mpice_out, &
+           nt_zaero_out, nt_zmp_out, nt_bgc_C_out, &
            nt_bgc_N_out, nt_bgc_chl_out, nt_bgc_DOC_out, nt_bgc_DON_out, &
            nt_bgc_DIC_out, nt_bgc_Fed_out, nt_bgc_Fep_out, nt_bgc_Nit_out, nt_bgc_Am_out, &
            nt_bgc_Sil_out, nt_bgc_DMSPp_out, nt_bgc_DMSPd_out, nt_bgc_DMS_out, nt_bgc_hum_out, &
@@ -843,6 +851,8 @@
              nt_isoice_out,  & ! starting index for isotopes in ice
              nt_aero_out,    & ! starting index for aerosols in ice
              nt_mp_out,      & ! starting index for microplastics in ice
+             nt_mpsno_out,   & ! starting index for microplastics in snow
+             nt_mpice_out,   & ! starting index for microplastics in ice
              nt_bgc_Nit_out, & ! nutrients
              nt_bgc_Am_out,  & !
              nt_bgc_Sil_out, & !
@@ -928,6 +938,8 @@
         if (present(nt_isoice_out)    ) nt_isoice_out     = nt_isoice
         if (present(nt_aero_out)      ) nt_aero_out       = nt_aero
         if (present(nt_mp_out)        ) nt_mp_out         = nt_mp
+        if (present(nt_mpsno_out)     ) nt_mpsno_out      = nt_mpsno
+        if (present(nt_mpice_out)     ) nt_mpice_out      = nt_mpice
         if (present(nt_bgc_Nit_out)   ) nt_bgc_Nit_out    = nt_bgc_Nit
         if (present(nt_bgc_Am_out)    ) nt_bgc_Am_out     = nt_bgc_Am
         if (present(nt_bgc_Sil_out)   ) nt_bgc_Sil_out    = nt_bgc_Sil
@@ -1011,6 +1023,8 @@
         write(iounit,*) "  nt_isoice     = ",nt_isoice
         write(iounit,*) "  nt_aero       = ",nt_aero
         write(iounit,*) "  nt_mp         = ",nt_mp
+        write(iounit,*) "  nt_mpsno      = ",nt_mpsno
+        write(iounit,*) "  nt_mpice      = ",nt_mpice
         write(iounit,*) "  nt_bgc_Nit    = ",nt_bgc_Nit
         write(iounit,*) "  nt_bgc_Am     = ",nt_bgc_Am
         write(iounit,*) "  nt_bgc_Sil    = ",nt_bgc_Sil

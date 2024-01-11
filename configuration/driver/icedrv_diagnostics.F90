@@ -46,8 +46,9 @@
          pdiso                ! change in mean isotope concentration
 
       real (kind=dbl_kind), dimension(nx,n_mp) :: &
-            pdmp              ! change in mean microplastics concentration
-
+            pdmp,           & ! change in mean microplastics concentration
+            pdimp,          & ! change in mean microplastics concentration in the ice
+            pdsmp             ! change in mean microplastics concentration in the snow
 !=======================================================================
 
       contains
@@ -94,14 +95,14 @@
          rsnwavg, rhosavg, smicetot, smliqtot, smtot
 
       real (kind=dbl_kind), dimension (nx) :: &
-         work1, work2, work3, work4
+         work1, work2, work3, work4, work5, work6
 
       real (kind=dbl_kind) :: &
          Tffresh, rhos, rhow, rhoi
 
       logical (kind=log_kind) :: tr_brine, tr_fsd, tr_iso, tr_mp, tr_snow
       integer (kind=int_kind) :: nt_fbri, nt_Tsfc, nt_fsd, nt_isosno, nt_isoice
-      integer (kind=int_kind) :: nt_mp!, nt_mpsno, nt_mpice
+      integer (kind=int_kind) :: nt_mp, nt_mpsno, nt_mpice
       integer (kind=int_kind) :: nt_rsnw, nt_rhos, nt_smice, nt_smliq
 
       character(len=*), parameter :: subname='(runtime_diags)'
@@ -115,7 +116,7 @@
       call icepack_query_tracer_flags(tr_brine_out=tr_brine, &
            tr_fsd_out=tr_fsd,tr_iso_out=tr_iso, tr_mp_out=tr_mp,tr_snow_out=tr_snow)
       call icepack_query_tracer_indices(nt_fbri_out=nt_fbri, nt_Tsfc_out=nt_Tsfc,&
-           nt_fsd_out=nt_fsd, nt_mp_out=nt_mp, &
+           nt_fsd_out=nt_fsd, nt_mp_out=nt_mp, nt_mpice_out=nt_mpice, nt_mpsno_out=nt_mpsno, &
            nt_isosno_out=nt_isosno, nt_isoice_out=nt_isoice, &
            nt_rsnw_out=nt_rsnw, nt_rhos_out=nt_rhos, &
            nt_smice_out=nt_smice, nt_smliq_out=nt_smliq)
@@ -198,11 +199,17 @@
 
 
         work4(:) = c0
+        work5(:) = c0
+        work6(:) = c0
 
         do k = 1, n_mp
-  !         work3 (n)  =  (trcr(n,nt_mpsno+k-1)*vsno(n) & !AJ: How to do this for nt_mp?
-  !                          +trcr(n,nt_mpice+k-1)*vice(n))
-  !         pdmp(n,k) = work4(n) - pdmp(n,k)
+           work4 (n) = trcr(n,nt_mpsno+k-1)*vsno(n)
+           work5 (n) = trcr(n,nt_mpice+k-1)*vice(n)
+           work6 (n) =  (trcr(n,nt_mpsno+k-1)*vsno(n) &
+                            +trcr(n,nt_mpice+k-1)*vice(n))
+           pdmp(n,k) = work6(n) - pdmp(n,k)
+           pdimp(n,k)= work5(n) - pdimp(n,k)
+           pdsmp(n,k)= work4(n) - pdsmp(n,k)
         enddo
 
         !-----------------------------------------------------------------
@@ -288,8 +295,10 @@
              write(nu_diag_out+n-1,901) 'MP flux from atmos     = ',fmp_atm(n,k)*dt,k
              write(nu_diag_out+n-1,901) 'MP flux to ocn         = ',fmp_ocn(n,k)*dt,k
              write(nu_diag_out+n-1,901) 'MP flux from ocean     = ',mp_ocn(n,k)*dt,k
-             write(nu_diag_out+n-1,901) 'MP gain/loss           = ',(fmp_atm(n,k)-fmp_ocn(n,k)+mp_ocn(n,k))*dt,k
-!             write(nu_diag_out+n-1,901) 'MP conc chg            = ',pdmp(n,k),k
+             write(nu_diag_out+n-1,901) 'MP gain/loss of sea ice= ',(fmp_atm(n,k)-fmp_ocn(n,k))*dt,k
+             write(nu_diag_out+n-1,901) 'MP conc chg            = ',pdmp(n,k),k
+             write(nu_diag_out+n-1,901) 'MP conc change in ice  = ',pdimp(n,k),k
+             write(nu_diag_out+n-1,901) 'MP conc change in snow = ',pdsmp(n,k),k
 
           enddo
         endif
@@ -310,7 +319,7 @@
 
       use icedrv_state, only: vice, vsno, trcr
 
-      integer (kind=int_kind) :: i, k, nt_isosno, nt_isoice!, nt_mpsno, nt_mpice
+      integer (kind=int_kind) :: i, k, nt_isosno, nt_isoice, nt_mpsno, nt_mpice
 
       real (kind=dbl_kind), dimension (nx) :: work1
 
@@ -318,8 +327,8 @@
 
       call icepack_query_tracer_indices(nt_isosno_out=nt_isosno)
       call icepack_query_tracer_indices(nt_isoice_out=nt_isoice)
-!      call icepack_query_tracer_indices(nt_mpsno_out=nt_mpsno)
-!      call icepack_query_tracer_indices(nt_mpice_out=nt_mpice)
+      call icepack_query_tracer_indices(nt_mpsno_out=nt_mpsno)
+      call icepack_query_tracer_indices(nt_mpice_out=nt_mpice)
 
       call total_energy (work1)
       do i = 1, nx
@@ -331,8 +340,10 @@
                          +trcr(i,nt_isoice+k-1)*vice(i))
          enddo
          do k = 1, n_mp
-!            pdmp(i,k) = (trcr(i,nt_mpsno+k-1)*vsno(i) & !AJ: How to do this for nt_mp?
-!                         +trcr(i,nt_mpice+k-1)*vice(i))
+            pdimp(i,k) =trcr(i,nt_mpice+k-1)*vice(i)
+            pdsmp(i,k) = trcr(i,nt_mpsno+k-1)*vsno(i)
+            pdmp(i,k) = (trcr(i,nt_mpsno+k-1)*vsno(i) &
+                         +trcr(i,nt_mpice+k-1)*vice(i))
          enddo
       enddo
 

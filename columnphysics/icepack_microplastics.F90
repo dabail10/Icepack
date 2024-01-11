@@ -1,8 +1,15 @@
 !=======================================================================
 
 ! Microplastics tracer within sea ice
+! Microplastics (MP) are tracked in kg in the code.
+! That means sources (ocean and atmosphere) are in kg/kg, and fluxes are in kg/m2/s,
+! using the density of Neutrally buoyant MPs (1023 kg/m3) for the conversion
+! from particles/m3 to kg/kg
+! Neutral buoyant density if based on Mountford, A. S., & Morales Maqueda, M. A. (2021).
 !
-! authors Alxandra Jahn, CU Boulder
+! Currently written with a max_mp of 6. Those could be different sources (Atlantic, Pacific, Arctic, Southern Ocean, Atmospheric deposition (by default in Artcic as neglected everywhere else)), in which case the scavenging factors set below should all be the same, as they would be behaving the same way physically. Or they could be used to try out different scavenging factors within the same model run, by setting the scavenging factors to different values
+!
+! Code authors: Alxandra Jahn, CU Boulder
 
       module icepack_microplastics
 
@@ -64,19 +71,19 @@
 
       real (kind=dbl_kind), dimension(:), &
          intent(inout) :: &
-         mp_ocn        ! ocean tracer concentrations of microplastics tracer
+         mp_ocn        ! ocean tracer concentrations of microplastics tracer (kg MP/kg sea water)
 
 
       real (kind=dbl_kind), dimension(:), &
          intent(in) :: &
-         fmp_atm   ! microplastics deposition rate (W/m^2 s)
+         fmp_atm   ! microplastics atmospheric deposition rate (kg/m^2/s)
 
       real (kind=dbl_kind), dimension(:), &
          intent(inout) :: &
-         fmp_ocn   ! microplastics flux to ocean (W/m^2 s)
+         fmp_ocn   ! microplastics flux to ocean (kg/m^2 s)
 
       real (kind=dbl_kind), dimension(:,:), intent(inout) :: &
-         mpsno,  mpice    ! kg/m^2
+         mpsno,  mpice    ! mass of microplastics in snow and ice (kg)
 
       !  local variables
       integer (kind=int_kind) :: k
@@ -99,21 +106,21 @@
          ar                        ! 1/aicen(i,j)
 
       real (kind=dbl_kind), dimension(max_mp) :: &
-         kscav, kscavsi,      & ! scavenging by melt water
-         kscavb, kscavf         ! scavenging by ice formation (basal and frazil)
+         kscav, kscavsi,      & ! scavenging by melt water (kscav) and snow-ice formation (kscavsi)
+         kscavb, kscavf         ! scavenging by ice formation (basal (kscavb) and frazil (kscavf))
       real (kind=dbl_kind), dimension(n_mp) :: &
          mptot, mptot0,     & ! for conservation check
          focn_old             ! for conservation check
 
-      ! echmod:  this assumes max_mp=6
-      !AJ: Adjust as we think, for now, make it take up everything =1
-      data kscav   / c1, c1, c1, &
+      ! The below assumes max_mp=6, need to expand table for more MPs
+      !AJ: Adjust as we think, for now, make it take up/take out everything =1
+      data kscav   / c1, c1, c1, &               !melt water scavenging
                      c1, c1, c1 /
-      data kscavsi / c1, c1, c1, &
+      data kscavsi / c1, c1, c1, &               !snow-ice formation scavenging
                      c1, c1, c1 /
-      data kscavb  / c1, c1, c1, &
+      data kscavb  / c1, c1, c1, &               !basal ice formation scavenging
                      c1, c1, c1 /
-      data kscavf  / c1, c1, c1, &
+      data kscavf  / c1, c1, c1, &               !frazil ice formation scavenging
                      c1, c1, c1 /
 
      character(len=*),parameter :: subname='(update_microplastics)'
@@ -493,7 +500,7 @@
          melts,    & ! snow melt rate (m/step)
          meltb,    & ! bottom melt rate (m/step)
          congel,   & ! congelation ice growth rate (m/step)
-         snoice,   &
+         snoice,   & !snow-ice formation (m/step)
          fsnow,    &
          vicen,    & ! ice volume (m)
          vsnon,    & ! snow volume (m)
@@ -504,12 +511,12 @@
 
       real (kind=dbl_kind),dimension(nbtrcr), intent(inout) :: &
          zbgc_snow, & ! microplastics contribution from snow to ice
-         zbgc_atm,  & ! and atm to ice concentration * volume (kg or mmol/m^3*m)
+         zbgc_atm,  & ! and atm to ice concentration * volume (kg m^3*m)
          flux_bio     ! total ocean tracer flux (mmol/m^2/s)
 
       real (kind=dbl_kind), dimension(nbtrcr), &
          intent(in) :: &
-         flux_bio_atm   ! microplastics deposition rate (kg or mmol/m^2 s)
+         flux_bio_atm   ! microplastics deposition rate (kg/m^2 s)
 
       real (kind=dbl_kind), dimension(ntrcr), &
          intent(inout) :: &
@@ -534,13 +541,14 @@
          ar                        ! 1/aicen(i,j)
 
       real (kind=dbl_kind), dimension(nbtrcr) :: &
-         mptot, mptot0, & ! for conservation check (mmol/m^3)
-         mp_cons        , & ! for conservation check (mmol/m^2)
-         flux_bio_o           ! initial ocean tracer flux (mmol/m^2/s)
+         mptot, mptot0,          & ! for conservation check (mmol/m^3)
+         mp_cons      ,          & ! for conservation check (mmol/m^2)
+         flux_bio_o                ! initial ocean tracer flux (mmol/m^2/s)
 
       real (kind=dbl_kind), dimension(nbtrcr,2) :: &
-         mpsno,  & ! kg/m^2
-         mpsno0    ! for diagnostic prints
+         mpsno,  & ! mass of microplastics in snow (kg)
+         mpsno0    ! mass of microplastics in (kg)
+                   ! both for diagnostic prints
 
       character(len=*),parameter :: subname='(update_snow_bgc)'
 
