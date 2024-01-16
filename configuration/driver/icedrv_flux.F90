@@ -512,7 +512,7 @@
       H2_18O_ocn(:) = c0
 
       ! microplastics concentration in ocean
-      mp_ocn   (:,:) = c0
+      mp_ocn   (:,:) = c0 ! microplastics concentration in the ocean kg/kg
 
       do i = 1, nx
          Tf (i) = icepack_liquidus_temperature(sss(i)) ! freezing temp (C)

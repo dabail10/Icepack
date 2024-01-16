@@ -24,7 +24,7 @@
 
 !=======================================================================
 
-! Aggregate flux information from all ice thickness categories
+! Aggregate flux information from all ice thickness categories - AJ: NEED TO ADD MP HERE?
 !
 ! author: Elizabeth C. Hunke and William H. Lipscomb, LANL
 

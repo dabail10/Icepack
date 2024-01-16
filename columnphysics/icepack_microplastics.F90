@@ -347,7 +347,7 @@
       endif
 
     !-------------------------------------------------------------------
-    ! redistribute microplastics within vertical layers
+    ! redistribute microplastics within vertical layers - from aero
     !-------------------------------------------------------------------
       if (aicen > c0) then
          hs = vsnon  * ar     ! new snow thickness
@@ -423,6 +423,11 @@
          mpice(:,:) = c0
       endif
 
+! AJ: DO WE NEED TO ADD THIS, TO GET THE DISGNIOSTICS TO WORK. THIS IS FROM ISO CODE, NEEDS CHANGES IN merge_fluxes
+! scale fmp_ocnn. It will be re-scaled by aicen later in merge_fluxes
+!   if (aicen > puny) then
+!       fmp_ocnn(:) = fmp_ocnn(:)/aicen
+!   endif
     !-------------------------------------------------------------------
     ! check conservation
     !-------------------------------------------------------------------

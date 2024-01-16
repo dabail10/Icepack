@@ -289,13 +289,13 @@
              write(nu_diag_out+n-1,901) 'isotopic conc chg    = ',pdiso(n,k),k
           enddo
         endif
-        if (tr_mp) then !AJ: ADD OUTOUT FOR MP HERE.
+        if (tr_mp) then !AJ: OUTOUT FOR MP HERE.
         write(nu_diag_out+n-1,*) '----------microplastic----------'
           do k = 1, n_mp
              write(nu_diag_out+n-1,901) 'MP flux from atmos     = ',fmp_atm(n,k)*dt,k
-             write(nu_diag_out+n-1,901) 'MP flux to ocn         = ',fmp_ocn(n,k)*dt,k
-             write(nu_diag_out+n-1,901) 'MP flux from ocean     = ',mp_ocn(n,k)*dt,k
-             write(nu_diag_out+n-1,901) 'MP gain/loss of sea ice= ',(fmp_atm(n,k)-fmp_ocn(n,k))*dt,k
+             write(nu_diag_out+n-1,901) 'MP flux to ocn (neg=from ocean)  = ',fmp_ocn(n,k)*dt,k
+             write(nu_diag_out+n-1,901) 'MP in ocean     = ',mp_ocn(n,k),k
+             write(nu_diag_out+n-1,901) 'MP gain/loss of sea ice',(fmp_atm(n,k)-fmp_ocn(n,k))*dt,k
              write(nu_diag_out+n-1,901) 'MP conc chg            = ',pdmp(n,k),k
              write(nu_diag_out+n-1,901) 'MP conc change in ice  = ',pdimp(n,k),k
              write(nu_diag_out+n-1,901) 'MP conc change in snow = ',pdsmp(n,k),k
