@@ -705,7 +705,7 @@
                            snow_bio_net, fswthrun, Rayleigh_criteria, &
                            sice_rho, fzsal, fzsal_g, &
                            bgrid, igrid, icgrid, cgrid,  &
-                           nblyr, nilyr, nslyr, n_algae, n_zaero, n_zmp, ncat, &
+                           nblyr, nilyr, nslyr, n_algae, n_zaero, ncat, &
                            n_doc, n_dic,  n_don, n_fed, n_fep,  &
                            meltbn, melttn, congeln, snoicen, &
                            sst, sss, fsnow, meltsn, &
@@ -723,7 +723,7 @@
          nblyr, &
          ntrcr, &
          nbtrcr, &
-         n_algae, n_zaero, n_zmp, &
+         n_algae, n_zaero, &
          n_doc, n_dic,  n_don, n_fed, n_fep
 
       real (kind=dbl_kind), dimension (:), intent(inout) :: &
@@ -956,7 +956,7 @@
                           n_doc,                 n_dic,                  &
                           n_don,                                         &
                           n_fed,                 n_fep,                  &
-                          n_zaero,               n_zmp,                  & !AJ: NEED MP HERE?
+                          n_zaero,               &
                           first_ice(n),                                  & 
                           hin_old(n),            ocean_bio(1:nbtrcr),    &
                           bphi(:,n),             iphin,                  &
@@ -1009,9 +1009,9 @@
 ! basic initialization for ocean_bio_all
 
       subroutine icepack_load_ocean_bio_array(max_nbtrcr, &
-          max_algae, max_don, max_doc, max_dic, max_aero, max_mp, max_fe, &
+          max_algae, max_don, max_doc, max_dic, max_aero, max_fe, &
           nit, amm, sil, dmsp, dms, algalN, &
-          doc, don, dic, fed, fep, zaeros, zmps, ocean_bio_all, hum)
+          doc, don, dic, fed, fep, zaeros, ocean_bio_all, hum)
 
       integer (kind=int_kind), intent(in) :: &
          max_algae   , & ! maximum number of algal types
@@ -1020,7 +1020,6 @@
          max_don     , & ! maximum number of dissolved organic nitrogen types
          max_fe      , & ! maximum number of iron types
          max_aero    , & ! maximum number of aerosols
-         max_mp      , & ! maximum number of microplastics tracers
          max_nbtrcr      ! maximum number of bio tracers
 
       real (kind=dbl_kind), intent(in) :: &
@@ -1048,9 +1047,6 @@
 
       real (kind=dbl_kind), dimension (max_aero), intent(in) :: &
          zaeros          ! ocean aerosols (mmol/m^3)
-
-      real (kind=dbl_kind), dimension (max_mp), intent(in) :: &
-          zmps           ! ocean microplastics (mmol/m^3)
 
       real (kind=dbl_kind), dimension (max_nbtrcr), intent(inout) :: &
          ocean_bio_all   ! fixed order, all values even for tracers false
@@ -1116,10 +1112,6 @@
          ocean_bio_all(ks+k) = zaeros(k)             ! zaero
       enddo
       ks = ks + max_aero + 1
-      do k = 1, max_mp
-         ocean_bio_all(ks+k) = zmps(k)               ! zmp
-      enddo
-      ks = ks + max_mp +1 !AJ : Is the +1 correct here, followig aero?
       ocean_bio_all(ks)  = hum                       ! humics
 
       end subroutine icepack_load_ocean_bio_array
@@ -1129,15 +1121,14 @@
 !  Initialize ocean concentration
 
       subroutine icepack_init_ocean_bio (amm, dmsp, dms, algalN, doc, dic, don, &
-             fed, fep, hum, nit, sil, zaeros, zmps, max_dic, max_don, max_fe,  &
-             max_aero, CToN, CToN_DON, max_mp)
+             fed, fep, hum, nit, sil, zaeros, max_dic, max_don, max_fe,  &
+             max_aero, CToN, CToN_DON)
 
       integer (kind=int_kind), intent(in) :: &
         max_dic, &
         max_don, &
         max_fe,  &
-        max_aero,&
-        max_mp
+        max_aero
 
       real (kind=dbl_kind), intent(out):: &
        amm      , & ! ammonium
@@ -1154,8 +1145,7 @@
        don      , & ! DON
        fed      , & ! Dissolved Iron
        fep      , & ! Particulate Iron
-       zaeros   , & ! BC and dust
-       zmps         ! Microplastics
+       zaeros       ! BC and dust
 
       real (kind=dbl_kind), dimension(:), intent(inout), optional :: &
        CToN     , & ! carbon to nitrogen ratio for algae
@@ -1211,9 +1201,6 @@
        sil  = 25.0_dbl_kind
        do k = 1, max_aero
          zaeros(k) = c0
-       enddo
-       do k = 1, max_mp
-         zmps(k) = c0
        enddo
 
       end subroutine icepack_init_ocean_bio

@@ -45,7 +45,6 @@
       use icepack_tracers, only: nt_qice, nt_qsno, nt_fbri, nt_sice
       use icepack_tracers, only: nt_alvl, nt_vlvl, nt_aero, nt_mp, nt_isosno, nt_isoice
       use icepack_tracers, only: nt_apnd, nt_hpnd
-      use icepack_tracers, only: n_iso
       use icepack_tracers, only: icepack_compute_tracers
 
       use icepack_warnings, only: warnstr, icepack_warnings_add
@@ -88,7 +87,7 @@
 
       subroutine ridge_ice (dt,          ndtd,       &
                             ncat,        n_aero,     &
-                            n_mp,                    &
+                            n_iso,       n_mp,       &
                             nilyr,       nslyr,      &
                             ntrcr,       hin_max,    &
                             rdg_conv,    rdg_shear,  &
@@ -104,8 +103,8 @@
                             dvirdgdt,    opening,    &
                             fpond,                   &
                             fresh,       fhocn,      &
-                            faero_ocn,   fmp_ocn,    &
-                            fiso_ocn,                &
+                            faero_ocn,   fiso_ocn,   &
+                            fmp_ocn,                 &
                             aparticn,    krdgn,      &
                             aredistn,    vredistn,   &
                             dardg1ndt,   dardg2ndt,  &
@@ -119,7 +118,8 @@
          nilyr , & ! number of ice layers
          nslyr , & ! number of snow layers
          n_aero, & ! number of aerosol tracers
-         n_mp  , & ! number of aerosol tracers
+         n_iso,  & ! number of isotope tracers
+         n_mp  , & ! number of microplastic tracers
          ntrcr     ! number of tracers in use
 
       real (kind=dbl_kind), intent(in) :: &
@@ -407,9 +407,10 @@
                            ardg1n,      ardg2n,      &
                            virdgn,                   &
                            nslyr,       n_aero,      &
-                           n_mp,                     &
+                           n_iso,       n_mp,        &
                            msnow_mlt,   esnow_mlt,   &
-                           maero,       mmp, miso,        &
+                           maero,       miso,        &
+                           mmp,                      &
                            mpond,       Tf,          &
                            aredistn,    vredistn)
          if (icepack_warnings_aborted(subname)) return
@@ -1098,9 +1099,10 @@
                               ardg1nn,     ardg2nn,         &
                               virdgnn,                      &
                               nslyr,       n_aero,          &
-                              n_mp,                         &
+                              n_iso,       n_mp,            &
                               msnow_mlt,   esnow_mlt,       &
-                              maero,       mmp, miso,            &
+                              maero,       miso,            &
+                              mmp,                          &
                               mpond,       Tf,              &
                               aredistn,    vredistn)
 
@@ -1109,6 +1111,7 @@
          nslyr , & ! number of snow layers
          ntrcr , & ! number of tracers in use
          n_aero, & ! number of aerosol tracers
+         n_iso,  & ! number of isotope tracers
          n_mp  , & ! number of microplastics tracers
          krdg_redist      ! selects redistribution function
 
@@ -1410,8 +1413,7 @@
             if (tr_iso) then
                do it = 1, n_iso
                   miso(it) = miso(it) + vsrdgn*(c1-fsnowrdg) &
-                           * (trcrn(nt_isosno+it-1,n) &
-                            + trcrn(nt_isoice+it-1,n))
+                           * trcrn(nt_isosno+it-1,n)
                enddo
             endif
 
@@ -1764,9 +1766,10 @@
                                     dvirdgdt,     opening,       &
                                     fpond,                       &
                                     fresh,        fhocn,         &
-                                    n_aero,       n_mp,          &
-                                    faero_ocn,    fmp_ocn,       &
-                                    fiso_ocn,                    &
+                                    n_aero,       n_iso,         &
+                                    n_mp,                        &
+                                    faero_ocn,    fiso_ocn,      &
+                                    fmp_ocn,                     &
                                     aparticn,     krdgn,         &
                                     aredistn,     vredistn,      &
                                     dardg1ndt,    dardg2ndt,     &
@@ -1789,7 +1792,8 @@
          nilyr , & ! number of ice layers
          nslyr , & ! number of snow layers
          n_aero, & ! number of aerosol tracers
-         n_mp      ! number of aerosol tracers
+         n_iso,  & ! number of isotope tracers
+         n_mp      ! number of microplastic tracers
 
 
       real (kind=dbl_kind), dimension(0:ncat), intent(inout) :: &
@@ -1840,11 +1844,14 @@
          aredistn , & ! redistribution function: fraction of new ridge area
          vredistn , & ! redistribution function: fraction of new ridge volume
          faero_ocn, & ! aerosol flux to ocean  (kg/m^2/s)
-         fmp_ocn  , & ! microplastics flux to ocean  (kg/m^2/s)
          flux_bio     ! all bio fluxes to ocean
 
       real (kind=dbl_kind), dimension(:), intent(inout), optional :: &
          fiso_ocn     ! isotope flux to ocean  (kg/m^2/s)
+
+      real (kind=dbl_kind), dimension(:), intent(inout), optional :: &
+         fmp_ocn      ! microplastic flux to ocean  (kg/m^2/s)
+
 
       real (kind=dbl_kind), dimension(:,:), intent(inout) :: &
          trcrn        ! tracers
@@ -1882,6 +1889,13 @@
               return
             endif
          endif
+         if (tr_mp) then
+            if (.not.(present(fmp_ocn))) then
+              call icepack_warnings_add(subname//' error in fmp_ocn argument, tr_mp=T')
+              call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
+              return
+            endif
+         endif
       endif
 
 
@@ -1894,7 +1908,7 @@
 
       call ridge_ice (dt,           ndtd,           &
                       ncat,         n_aero,         &
-                      n_mp,                         &
+                      n_iso,        n_mp,           &
                       nilyr,        nslyr,          &
                       ntrcr,        hin_max,        &
                       rdg_conv,     rdg_shear,      &
@@ -1912,8 +1926,8 @@
                       dvirdgdt,     opening,        &
                       fpond,                        &
                       fresh,        fhocn,          &
-                      faero_ocn,    fmp_ocn,        &
-                      fiso_ocn,                     &
+                      faero_ocn,    fiso_ocn,       &
+                      fmp_ocn,                      &
                       aparticn,     krdgn,          &
                       aredistn,     vredistn,       &
                       dardg1ndt,    dardg2ndt,      &
@@ -1934,16 +1948,19 @@
                         aicen,                trcrn,            &
                         vicen,                vsnon,            &
                         aice0,                aice,             &
-                        n_aero,               n_mp,             &
+                        n_aero,               n_iso,            &
+                        n_mp,                                   &
                         nbtrcr,               nblyr,            &
-                        tr_aero,              tr_mp,            &
+                        tr_aero,              tr_iso,           &
+                        tr_mp,                                  &
                         tr_pond_topo,                           &
                         first_ice,                              &
                         trcr_depend,          trcr_base,        &
                         n_trcr_strata,        nt_strata,        &
                         fpond,                fresh,            &
                         fsalt,                fhocn,            &
-                        faero_ocn,            fmp_ocn, fiso_ocn,         &
+                        faero_ocn,            fiso_ocn,         &
+                        fmp_ocn,                                &
                         flux_bio,             Tf)
       if (icepack_warnings_aborted(subname)) return
 

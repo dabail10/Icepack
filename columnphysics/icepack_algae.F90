@@ -34,7 +34,6 @@
       use icepack_tracers, only: tr_bgc_DMS,    tr_bgc_PON
       use icepack_tracers, only: tr_bgc_N,      tr_bgc_C,     tr_bgc_chl
       use icepack_tracers, only: tr_bgc_DON,    tr_bgc_Fe,    tr_zaero
-      use icepack_tracers, only: tr_zmp,        nlt_zmp
       use icepack_tracers, only: nlt_bgc_Nit,   nlt_bgc_Am,   nlt_bgc_Sil
       use icepack_tracers, only: nlt_bgc_DMS,   nlt_bgc_PON
       use icepack_tracers, only: nlt_bgc_N,     nlt_bgc_C,    nlt_bgc_chl
@@ -92,7 +91,7 @@
                          n_doc,        n_dic,       &
                          n_don,                     &
                          n_fed,        n_fep,       &
-                         n_zaero,      n_zmp,       &
+                         n_zaero,      &
                          first_ice,                 &
                          hice_old,     ocean_bio,   &
                          bphin,        iphin,       &
@@ -122,7 +121,6 @@
          n_cat,              & ! category number
          n_algae,            & ! number of autotrophs
          n_zaero,            & ! number of aerosols
-         n_zmp,              & ! number of microplastics
          n_doc, n_dic,  n_don, n_fed, n_fep, &
          ntrcr                 ! number of tracers
 
@@ -280,7 +278,7 @@
                                 n_algae,      n_doc,     &
                                 n_dic,        n_don,     &
                                 n_fed,        n_fep,     &
-                                n_zaero,      n_zmp,     &
+                                n_zaero,      &
                                 first_ice,               &
                                 aicen,        vicen,     &
                                 hice_old,     ocean_bio, &
@@ -762,7 +760,7 @@
                                     n_algae,      n_doc,     &
                                     n_dic,        n_don,     &
                                     n_fed,        n_fep,     &
-                                    n_zaero,      n_zmp,     &
+                                    n_zaero,      &
                                     first_ice,               &
                                     aicen,        vicen,     &
                                     hice_old,     ocean_bio, &
@@ -789,7 +787,6 @@
          nblyr,              & ! number of bio layers
          nbtrcr, n_algae,    & ! number of bgc tracers, number of autotrophs
          n_zaero,            & ! number of aerosols
-         n_zmp,              & ! number of microplastics
          n_doc, n_dic,  n_don, n_fed, n_fep
 
       logical (kind=log_kind), intent(in) :: &

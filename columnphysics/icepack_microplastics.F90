@@ -118,8 +118,8 @@
                      0.0_dbl_kind, 0.0_dbl_kind, 0.0_dbl_kind /
       data kscavsi / 0.0_dbl_kind, 0.0_dbl_kind, 0.0_dbl_kind, &               !snow-ice formation scavenging
                      0.0_dbl_kind, 0.0_dbl_kind, 0.0_dbl_kind /
-      data kupfb   / 0.0_dbl_kind, 0.0_dbl_kind, 0.0_dbl_kind, &               !LLW: basal ice formation uptake factor
-                     0.0_dbl_kind, 0.0_dbl_kind, 0.0_dbl_kind /
+      data kupfb   / c1, c1, c1, &               !LLW: basal ice formation uptake factor
+                     c1, c1, c1 /
       data kscavf  / c0, c0, c0, &               !frazil ice formation scavenging
                      c0, c0, c0 /                !LLW: uptake factor updated in therm_itd.F90
 
@@ -188,16 +188,6 @@
             mpice(k,2) = mpice(k,2) + sloss2
             fmp_ocn(k) = fmp_ocn(k) - sloss2/dt
 
-            !if (dzint > puny)  &     ! Internal layer
-            !     sloss2 = min(dhi_congel, dzint)  &
-            !            *mp_ocn(k)/dzint*rhoi*aicen
-            !if (dzssl > puny)  & ! Surface scattering layer
-            !     sloss1 = max(dhi_congel-dzint, c0)  &
-            !            *mp_ocn(k)/dzint*rhoi*aicen
-            !mpice(k,1) = mpice(k,1) &
-            !             + (c1-kscavb(k))*(sloss2+sloss1)
-            !fmp_ocn(k) = fmp_ocn(k) &
-            !             - kscavb(k)*(sloss2+sloss1)/dt
          enddo
 
             dzinti = dzinti + dhi_congel

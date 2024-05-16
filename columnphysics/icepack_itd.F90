@@ -31,7 +31,7 @@
       use icepack_parameters, only: rhosi, sk_l, hs_ssl, min_salin, rsnw_fall, rhosnew
       use icepack_tracers,    only: nt_Tsfc, nt_qice, nt_qsno, nt_aero, nt_mp, nt_isosno, nt_isoice
       use icepack_tracers,    only: nt_apnd, nt_hpnd, nt_fbri, tr_brine, bio_index
-      use icepack_tracers,    only: n_iso, tr_iso, nt_smice, nt_rsnw, nt_rhos, nt_sice
+      use icepack_tracers,    only: nt_smice, nt_rsnw, nt_rhos, nt_sice
       use icepack_tracers,    only: icepack_compute_tracers
       use icepack_parameters, only: skl_bgc, z_tracers, hi_min
       use icepack_parameters, only: kcatbound, kitd, saltflux_option, snwgrain, snwredist
@@ -765,17 +765,19 @@
                               aicen,       trcrn,      &
                               vicen,       vsnon,      &
                               aice0,       aice,       &
-                              n_aero,      n_mp,       &
+                              n_aero,      n_iso,      &
+                              n_mp,                    &
                               nbtrcr,      nblyr,      &
-                              tr_aero,     tr_mp,      &
+                              tr_aero,     tr_iso,     &
+                              tr_mp,                   &
                               tr_pond_topo,            &
                               first_ice,               &
                               trcr_depend, trcr_base,  &
                               n_trcr_strata,nt_strata, &
                               fpond,       fresh,      &
                               fsalt,       fhocn,      &
-                              faero_ocn,   fmp_ocn,    &
-                              fiso_ocn,    flux_bio,   &
+                              faero_ocn,   fiso_ocn,   &
+                              fmp_ocn,     flux_bio,   &
                               Tf, limit_aice_in)
 
       integer (kind=int_kind), intent(in) :: &
@@ -786,6 +788,7 @@
          ntrcr , & ! number of tracers in use
          nbtrcr, & ! number of bio tracers in use
          n_aero, & ! number of aerosol tracers
+         n_iso,  & ! number of aerosol tracers
          n_mp      ! number of microplastics tracers
 
       real (kind=dbl_kind), intent(in) :: &
@@ -822,6 +825,7 @@
 
       logical (kind=log_kind), intent(in) :: &
          tr_aero,      & ! aerosol flag
+         tr_iso,       & ! isotope flag
          tr_mp,        & ! microplastics flag
          tr_pond_topo    ! topo pond flag
 
@@ -867,11 +871,11 @@
       real (kind=dbl_kind), dimension (n_aero) :: &
          dfaero_ocn   ! zapped aerosol flux   (kg/m^2/s)
 
-      real (kind=dbl_kind), dimension (n_mp) :: &
-         dfmp_ocn   ! zapped microplastics flux   (kg/m^2/s)
-
       real (kind=dbl_kind), dimension (n_iso) :: &
          dfiso_ocn    ! zapped isotope flux   (kg/m^2/s)
+
+      real (kind=dbl_kind), dimension (n_mp) :: &
+         dfmp_ocn   ! zapped microplastics flux   (kg/m^2/s)
 
       real (kind=dbl_kind), dimension (ntrcr) :: &
          dflux_bio    ! zapped biology flux  (mmol/m^2/s)
@@ -952,7 +956,8 @@
       if (limit_aice) then
          call zap_small_areas (dt,           ntrcr,         &
                                ncat,                        &
-                               n_aero,       n_mp,          &
+                               n_aero,       n_iso,         &
+                               n_mp,                        &
                                nblyr,                       &
                                nilyr,        nslyr,         &
                                aice,         aice0,         &
@@ -961,9 +966,10 @@
                                dfpond,                      &
                                dfresh,       dfsalt,        &
                                dfhocn,                      &
-                               dfaero_ocn,   dfmp_ocn,      &
-                               dfiso_ocn,                   &
-                               tr_aero,      tr_mp,         &
+                               dfaero_ocn,   dfiso_ocn,     &
+                               dfmp_ocn,                    &
+                               tr_aero,      tr_iso,        &
+                               tr_mp,                       &
                                tr_pond_topo,                &
                                first_ice,    nbtrcr,        &
                                dflux_bio,    Tf             )
@@ -990,10 +996,11 @@
                                 trcrn,         vsnon,    &
                                 dfresh,        dfhocn,   &
                                 dfaero_ocn,    tr_aero,  &
+                                dfiso_ocn,     tr_iso,   &
                                 dfmp_ocn,      tr_mp,    &
-                                dfiso_ocn,               &
                                 dflux_bio,     nbtrcr,   &
-                                n_aero,        n_mp)
+                                n_aero,        n_iso,    &
+                                n_mp)
       if (icepack_warnings_aborted(subname)) return
 
     !-------------------------------------------------------------------
@@ -1013,15 +1020,17 @@
            faero_ocn(it) = faero_ocn(it) + dfaero_ocn(it)
          enddo
       endif
-      if (present(fmp_ocn)) then
-         do it = 1, n_mp
-           fmp_ocn(it) = fmp_ocn(it) + dfmp_ocn(it)
-         enddo
-      endif
       if (present(fiso_ocn)) then
          if (tr_iso) then
             do it = 1, n_iso
               fiso_ocn(it) = fiso_ocn(it) + dfiso_ocn(it)
+            enddo
+         endif
+      endif
+      if (present(fmp_ocn)) then
+         if (tr_mp) then
+            do it = 1, n_mp
+              fmp_ocn(it) = fmp_ocn(it) + dfmp_ocn(it)
             enddo
          endif
       endif
@@ -1042,7 +1051,8 @@
 
       subroutine zap_small_areas (dt,        ntrcr,        &
                                   ncat,                    &
-                                  n_aero,    n_mp,         &
+                                  n_aero,    n_iso,        &
+                                  n_mp,                    &
                                   nblyr,                   &
                                   nilyr,     nslyr,        &
                                   aice,      aice0,        &
@@ -1051,9 +1061,10 @@
                                   dfpond,                  &
                                   dfresh,    dfsalt,       &
                                   dfhocn,                  &
-                                  dfaero_ocn, dfmp_ocn,    &
-                                  dfiso_ocn,               &
-                                  tr_aero, tr_mp,          &
+                                  dfaero_ocn, dfiso_ocn,   &
+                                  dfmp_ocn,                &
+                                  tr_aero,    tr_iso,      &
+                                  tr_mp,                   &
                                   tr_pond_topo,            &
                                   first_ice, nbtrcr,       &
                                   dflux_bio, Tf            )
@@ -1065,6 +1076,7 @@
          nslyr    , & ! number of snow layers
          ntrcr    , & ! number of tracers in use
          n_aero   , & ! number of aerosol tracers
+         n_iso    , & ! number of isotope tracers
          n_mp     , & ! number of microplastics tracers
          nbtrcr       ! number of biology tracers
 
@@ -1106,6 +1118,7 @@
 
       logical (kind=log_kind), intent(in) :: &
          tr_aero, &   ! aerosol flag
+         tr_iso,  &   ! isotope flag
          tr_mp,   &   ! microplastics flag
          tr_pond_topo ! pond flag
 
@@ -1159,18 +1172,18 @@
                enddo
             endif
 
+            if (tr_iso) then
+               do it = 1, n_iso
+                  xtmp = vicen(n)*trcrn(nt_isoice+it-1,n)/dt
+                  dfiso_ocn(it) = dfiso_ocn(it) + xtmp
+               enddo
+            endif
+
             if (tr_mp) then
                do it = 1, n_mp
                   xtmp = (vicen(n)*(trcrn(nt_mp+2+4*(it-1),n)     &
                                   + trcrn(nt_mp+3+4*(it-1),n)))/dt
                   dfmp_ocn(it) = dfmp_ocn(it) + xtmp
-               enddo
-            endif
-
-            if (tr_iso) then
-               do it = 1, n_iso
-                  xtmp = vicen(n)*trcrn(nt_isoice+it-1,n)/dt
-                  dfiso_ocn(it) = dfiso_ocn(it) + xtmp
                enddo
             endif
 
@@ -1237,10 +1250,11 @@
                           trcrn(:,n),    vsnon(n), &
                           dfresh,        dfhocn,   &
                           dfaero_ocn,    tr_aero,  &
+                          dfiso_ocn,     tr_iso,   &
                           dfmp_ocn,      tr_mp,    &
-                          dfiso_ocn,               &
                           dflux_bio,     nbtrcr,   &
-                          n_aero,        n_mp,     &
+                          n_aero,        n_iso,    &
+                          n_mp,                    &
                           aicen(n),      nblyr)
             if (icepack_warnings_aborted(subname)) return
 
@@ -1305,6 +1319,15 @@
                enddo               ! it
             endif
 
+            if (tr_iso) then
+               do it = 1, n_iso
+                  xtmp = (vsnon(n)*trcrn(nt_isosno+it-1,n)     &
+                       +  vicen(n)*trcrn(nt_isoice+it-1,n))    &
+                       * (aice-c1)/aice / dt
+                  dfiso_ocn(it) = dfiso_ocn(it) + xtmp
+               enddo               ! it
+            endif
+
             if (tr_mp) then
                do it = 1, n_mp
                   xtmp = (vsnon(n)*(trcrn(nt_mp  +4*(it-1),n)     &
@@ -1313,15 +1336,6 @@
                                   + trcrn(nt_mp+3+4*(it-1),n)))   &
                        * (aice-c1)/aice / dt
                   dfmp_ocn(it) = dfmp_ocn(it) + xtmp
-               enddo               ! it
-            endif
-
-            if (tr_iso) then
-               do it = 1, n_iso
-                  xtmp = (vsnon(n)*trcrn(nt_isosno+it-1,n)     &
-                       +  vicen(n)*trcrn(nt_isoice+it-1,n))    &
-                       * (aice-c1)/aice / dt
-                  dfiso_ocn(it) = dfiso_ocn(it) + xtmp
                enddo               ! it
             endif
 
@@ -1393,15 +1407,17 @@
                           trcrn,      vsnon,    &
                           dfresh,     dfhocn,   &
                           dfaero_ocn, tr_aero,  &
+                          dfiso_ocn,  tr_iso,   &
                           dfmp_ocn,   tr_mp,    &
-                          dfiso_ocn,            &
                           dflux_bio,  nbtrcr,   &
-                          n_aero,     n_mp,     &
+                          n_aero,     n_iso,    &
+                          n_mp,                 &
                           aicen,      nblyr)
 
       integer (kind=int_kind), intent(in) :: &
          nslyr    , & ! number of snow layers
          n_aero   , & ! number of aerosol tracers
+         n_iso    , & ! number of isotope tracers
          n_mp     , & ! number of microplastics tracers
          nblyr    , & ! number of bio  layers
          nbtrcr
@@ -1436,7 +1452,10 @@
          tr_aero      ! aerosol flag
 
       logical (kind=log_kind), intent(in) :: &
-            tr_mp      ! microplastics flag
+          tr_iso      ! isotope flag
+
+      logical (kind=log_kind), intent(in) :: &
+          tr_mp      ! microplastics flag
 
       ! local variables
 
@@ -1456,15 +1475,6 @@
          enddo                 ! it
       endif ! tr_aero
 
-      ! mircoplastics
-      if (tr_mp) then
-         do it = 1, n_mp
-            xtmp = (vsnon*(trcrn(nt_mp  +4*(it-1))     &
-                         + trcrn(nt_mp+1+4*(it-1))))/dt
-            dfmp_ocn(it) = dfmp_ocn(it) + xtmp
-         enddo                 ! it
-      endif ! tr_mp
-
       ! isotopes
       if (tr_iso) then
          do it = 1, n_iso
@@ -1472,6 +1482,15 @@
             dfiso_ocn(it) = dfiso_ocn(it) + xtmp
          enddo                 ! it
       endif ! tr_iso
+
+      ! microplastics
+      if (tr_mp) then
+         do it = 1, n_mp
+            xtmp = (vsnon*(trcrn(nt_mp  +4*(it-1))     &
+                         + trcrn(nt_mp+1+4*(it-1))))/dt
+            dfmp_ocn(it) = dfmp_ocn(it) + xtmp
+         enddo                 ! it
+      endif ! tr_mp
 
       if (z_tracers) then
          dvssl = min(p5*vsnon/real(nslyr,kind=dbl_kind), hs_ssl*aicen) ! snow surface layer
@@ -1508,15 +1527,16 @@
                                       trcrn,      vsnon,    &
                                       dfresh,     dfhocn,   &
                                       dfaero_ocn, tr_aero,  &
+                                      dfiso_ocn,  tr_iso,   &
                                       dfmp_ocn,   tr_mp,    &
-                                      dfiso_ocn,            &
                                       dflux_bio,  nbtrcr,   &
-                                      n_aero, n_mp )
+                                      n_aero, n_iso, n_mp )
 
       integer (kind=int_kind), intent(in) :: &
          ncat  , & ! number of thickness categories
          nslyr , & ! number of snow layers
          n_aero, & ! number of aerosol tracers
+         n_iso,  & ! number of isotope tracers
          n_mp,   & ! number of microplastics tracers
          nbtrcr, & ! number of z-tracers in use
          nblyr     ! number of bio  layers in ice
@@ -1551,6 +1571,9 @@
 
       logical (kind=log_kind), intent(in) :: &
          tr_aero      ! aerosol flag
+
+      logical (kind=log_kind), intent(in) :: &
+         tr_iso       ! isotopes flag
 
       logical (kind=log_kind), intent(in) :: &
          tr_mp      ! microplastics flag
@@ -1632,10 +1655,11 @@
                           trcrn(:,n),    vsnon(n), &
                           dfresh,        dfhocn,   &
                           dfaero_ocn,    tr_aero,  &
+                          dfiso_ocn,     tr_iso,   &
                           dfmp_ocn,      tr_mp,    &
-                          dfiso_ocn,               &
                           dflux_bio,     nbtrcr,   &
-                          n_aero,        n_mp,     &
+                          n_aero,        n_iso,    &
+                          n_mp,     &
                           aicen(n),      nblyr)
             if (icepack_warnings_aborted(subname)) return
 

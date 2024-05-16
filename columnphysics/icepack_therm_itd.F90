@@ -879,7 +879,8 @@
 !
       subroutine lateral_melt (dt,         ncat,       &
                                nilyr,      nslyr,      &
-                               n_aero,     n_mp,       &
+                               n_aero,     n_iso,      &
+                               n_mp,                   &
                                fpond,                  &
                                fresh,      fsalt,      &
                                fhocn,      faero_ocn,  &
@@ -902,6 +903,7 @@
          nblyr   , & ! number of bio layers
          nslyr   , & ! number of snow layers
          n_aero  , & ! number of aerosol tracers
+         n_iso   , & ! number of isotope tracers
          n_mp    , & ! number of microplastic tracers
          nbtrcr      ! number of bio tracers
 
@@ -941,7 +943,7 @@
       real (kind=dbl_kind), dimension(:), intent(inout), optional :: &
          fiso_ocn     ! isotope flux to ocean (kg/m^2/s)
 
-      real (kind=dbl_kind), dimension(:), intent(inout) :: &
+      real (kind=dbl_kind), dimension(:), intent(inout), optional :: &
          fmp_ocn      ! microplastic flux to ocean (kg/m^2/s)
 
       real (kind=dbl_kind), dimension (:), intent(in), optional :: &
@@ -1231,7 +1233,7 @@
                   fiso_ocn(k) = fiso_ocn(k) &
                               + (vsnon(n)*trcrn(nt_isosno+k-1,n) &
                               +  vicen(n)*trcrn(nt_isoice+k-1,n)) &
-                              * rside / dt
+                              * rsiden(n) / dt
                enddo ! k
             endif    ! tr_iso
 
@@ -1803,8 +1805,8 @@
                   frazil_conc = c0
                   frazil_conc = 0.9_dbl_kind*mp_ocn(it)
 
-                  trcrn(nt_mp+2+4*(it-1),n) = &
-                        (trcrn(nt_mp+2+4*(it-1),n)*vicen(n) + frazil_conc*rhoi*vsurp) / vtmp
+!                 trcrn(nt_mp+2+4*(it-1),n) = &
+!                       (trcrn(nt_mp+2+4*(it-1),n)*vicen(n) + frazil_conc*rhoi*vsurp) / vtmp
                   trcrn(nt_mp+3+4*(it-1),n) = &
                         (trcrn(nt_mp+3+4*(it-1),n)*vicen(n) + frazil_conc*rhoi*vsurp) / vtmp
 
@@ -1924,11 +1926,11 @@
                     frazil_conc = isoice_alpha(c0,'H2_18O',isotope_frac_method)*H2_18O_ocn
 
                  trcrn(nt_isoice+it-1,1) &
-                   = (trcrn(nt_isoice+it-1,1)*vice1) &
-                   + frazil_conc*rhoi*vi0new/vicen(1)
+                   = (trcrn(nt_isoice+it-1,1)*vice1 &
+                   + frazil_conc*rhoi*vin0new(n))/vicen(n)
 
                  fiso_ocn(it) = fiso_ocn(it) &
-                              - frazil_conc*rhoi*vi0new/dt
+                              - frazil_conc*rhoi*vin0new(n)/dt
                enddo
             endif
 
@@ -1937,13 +1939,13 @@
                  frazil_conc = c0
                  frazil_conc = 0.9_dbl_kind*mp_ocn(it)
 
-                 trcrn(nt_mp+2+4*(it-1),n) = &
-                        (trcrn(nt_mp+2+4*(it-1),n)*vice1) + frazil_conc*rhoi*vi0new/vicen(1)
+!                trcrn(nt_mp+2+4*(it-1),n) = &
+!                       (trcrn(nt_mp+2+4*(it-1),n)*vice1 + frazil_conc*rhoi*vin0new(n))/vicen(n)
                  trcrn(nt_mp+3+4*(it-1),n) = &
-                        (trcrn(nt_mp+3+4*(it-1),n)*vice1) + frazil_conc*rhoi*vi0new/vicen(1)
+                        (trcrn(nt_mp+3+4*(it-1),n)*vice1 + frazil_conc*rhoi*vin0new(n))/vicen(n)
 
                  fmp_ocn(it) = fmp_ocn(it) &
-                              - frazil_conc*rhoi*vi0new/dt
+                              - frazil_conc*rhoi*vin0new(n)/dt
                enddo
             endif
 
@@ -2333,21 +2335,26 @@
       ! Melt ice laterally.
       !-----------------------------------------------------------------
 
-      call lateral_melt (dt,        ncat,          &
-                         nilyr,     nslyr,         &
-                         n_aero,    n_mp,          &
-                         fpond,                    &
-                         fresh,     fsalt,         &
-                         fhocn,     faero_ocn,     &
-                         fiso_ocn,  fmp_ocn,       &
-                         rside,     meltl,         &
-                         fside,     wlat,          &
-                         aicen,     vicen,         &
-                         vsnon,     trcrn,         &
-                         flux_bio,                 &
-                         nbtrcr,    nblyr,         &
-                         nfsd,      d_afsd_latm,   &
-                         floe_rad_c,floe_binwidth)
+      call lateral_melt (dt=dt,     ncat=ncat,       &
+                         nilyr=nilyr,   nslyr=nslyr, &
+                         n_aero=n_aero, n_iso=n_iso, &
+                         n_mp=n_mp,                  &
+                         fpond=fpond,                &
+                         fresh=fresh,   fsalt=fsalt, &
+                         fhocn=fhocn,                &
+                         faero_ocn=faero_ocn,        &
+                         fiso_ocn=fiso_ocn,          &
+                         fmp_ocn=fmp_ocn,            &
+                         rside=rside,   meltl=meltl, &
+                         fside=fside,   wlat=wlat,   &
+                         aicen=aicen,   vicen=vicen, &
+                         vsnon=vsnon,   trcrn=trcrn, &
+                         flux_bio=flux_bio,          &
+                         nbtrcr=nbtrcr, nblyr=nblyr, &
+                         nfsd=nfsd,                  &
+                         d_afsd_latm=d_afsd_latm,    &
+                         floe_rad_c=floe_rad_c,      &
+                         floe_binwidth=floe_binwidth)
       if (icepack_warnings_aborted(subname)) return
 
       ! Floe welding during freezing conditions
@@ -2382,9 +2389,11 @@
                         aicen,                trcrn(1:ntrcr,:), &
                         vicen,                vsnon,            &
                         aice0,                aice,             &
-                        n_aero,               n_mp,             &
+                        n_aero,               n_iso,            &
+                        n_mp,                                   &
                         nbtrcr,               nblyr,            &
-                        tr_aero,              tr_mp,            &
+                        tr_aero,              tr_iso,           &
+                        tr_mp,                                  &
                         tr_pond_topo,                           &
                         first_ice,                              &
                         trcr_depend,          trcr_base,        &

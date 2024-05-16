@@ -3710,9 +3710,8 @@
                                         vsnon,    Tsfcn,     &
                                         alvln,    apndn,     &
                                         hpndn,    ipndn,     &
-                                        aeron,    mpn,       &
+                                        aeron,    &
                                         bgcNn,    zaeron,    &
-                                        zmpn,                &
                                         trcrn_bgcsw,         &
                                         TLAT,     TLON,      &
                                         calendar_type,       &
@@ -3786,10 +3785,8 @@
 
       real(kind=dbl_kind), dimension(:,:), intent(in) :: &
          aeron     , & ! aerosols (kg/m^3)
-         mpn       , & ! microplasics (kg/m^3)
          bgcNn     , & ! bgc Nit tracers
-         zaeron    , & ! bgcz aero tracers
-         zmpn          ! bgcz microplastics tracers
+         zaeron        ! bgcz aero tracers
 
 
       real(kind=dbl_kind), dimension(:,:), intent(inout) :: &

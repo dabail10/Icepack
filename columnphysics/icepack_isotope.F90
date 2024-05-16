@@ -113,8 +113,8 @@
         hi,        &
         hs
 
-!      real (kind=dbl_kind), dimension(n_iso) :: &
-!        isotot, isotot0         ! for diagnostics
+       real (kind=dbl_kind), dimension(n_iso) :: &
+         isotot, isotot0         ! for diagnostics
 
       real (kind=dbl_kind) :: &
         hs_old, hi_old, sloss1, &
@@ -162,6 +162,9 @@
 
       TsfK = Tsfc + Tffresh
 
+      do k=1,n_iso
+          isotot0(k) = isosno(k) + isoice(k)
+      enddo
       if (evaps > c0) then   ! condensation to snow
          do k = 1, n_iso
             ratio = c1   ! ratio between 18O(HDO) and 16O in humidity
@@ -388,26 +391,26 @@
          endif
       endif
 
-!      do k=1,n_iso
-!         isotot(k) = isosno(k) + isoice(k)
+       do k=1,n_iso
+          isotot(k) = isosno(k) + isoice(k)
 
-!         if ( (isotot(k)-isotot0(k))                 &
-!            - fiso_atm  (k)*dt*aicen                 &
-!            - fiso_evapn(k)*dt                       &
-!            + fiso_ocnn (k)*dt > 1e-6) then
-!            write(nu_diag,*) 'isotope tracer:    ',k
-!            write(nu_diag,*) 'isotot-isotot0     ',isotot(k)-isotot0(k)
-!            write(nu_diag,*) 'fiso_atm-fiso_ocnn ',fiso_atm  (k)*dt*aicen &
-!                                                 + fiso_evapn(k)*dt &
-!                                                 - fiso_ocnn (k)*dt
-!         endif
-!      enddo          ! n_iso
+          if ( (isotot(k)-isotot0(k))                 &
+             - fiso_atm  (k)*dt*aicen                 &
+             - fiso_evapn(k)*dt                       &
+             + fiso_ocnn (k)*dt > 1e-6) then
+             write(*,*) 'isotope tracer:    ',k
+             write(*,*) 'isotot-isotot0     ',isotot(k)-isotot0(k)
+             write(*,*) 'fiso_atm-fiso_ocnn ',fiso_atm  (k)*dt*aicen &
+                                                  + fiso_evapn(k)*dt &
+                                                  - fiso_ocnn (k)*dt
+          endif
+       enddo          ! n_iso
 
       ! scale fiso_ocnn. It will be re-scaled by aicen later in merge_fluxes
-      if (aicen > puny) then
-         fiso_ocnn(:) = fiso_ocnn(:)/aicen
-         fiso_evapn(:) = fiso_evapn(:)/aicen
-      endif
+!     if (aicen > puny) then
+!        fiso_ocnn(:) = fiso_ocnn(:)/aicen
+!        fiso_evapn(:) = fiso_evapn(:)/aicen
+!     endif
 
       end subroutine update_isotope
 

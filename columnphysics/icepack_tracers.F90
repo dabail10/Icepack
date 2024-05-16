@@ -63,7 +63,6 @@
          n_aero       = 0, & ! number of aerosols in use
          n_mp         = 0, & ! number of microplastics in use
          n_zaero      = 0, & ! number of z aerosols in use
-         n_zmp        = 0, & ! number of z microplastics in use
          n_algae      = 0, & ! number of algae in use
          n_doc        = 0, & ! number of DOC pools in use
          n_dic        = 0, & ! number of DIC pools in use
@@ -93,8 +92,6 @@
          nt_isoice    = 0, & ! starting index for isotopes in ice
          nt_aero      = 0, & ! starting index for aerosols in ice
          nt_mp        = 0, & ! starting index for microplastics in ice
-         nt_mpsno     = 0, & ! starting index for microplastics in snow
-         nt_mpice     = 0, & ! starting index for microplastics in ice
          nt_bgc_Nit   = 0, & ! nutrients
          nt_bgc_Am    = 0, & !
          nt_bgc_Sil   = 0, & !
@@ -126,7 +123,6 @@
 
       logical (kind=log_kind), public :: &
          tr_zaero     = .false., & ! if .true., black carbon as tracers  (n_zaero)
-         tr_zmp       = .false., & ! if .true., microplastic as tracers  (n_zmp)
          tr_bgc_Nit   = .false., & ! if .true. Nitrate tracer in ice
          tr_bgc_N     = .false., & ! if .true., algal nitrogen tracers  (n_algae)
          tr_bgc_DON   = .false., & ! if .true., DON pools are tracers  (n_don)
@@ -146,9 +142,6 @@
 
       integer (kind=int_kind), dimension(max_aero), public :: &
          nlt_zaero_sw = 0    ! points to aerosol in trcrn_sw
-
-      integer (kind=int_kind), dimension(max_mp), public :: &
-         nlt_zmp_sw = 0    ! points to microplstics in trcrn_sw
 
       integer (kind=int_kind), dimension(max_algae), public :: &
          nlt_bgc_N    = 0, & ! algae
@@ -170,9 +163,6 @@
 
       integer (kind=int_kind), dimension(max_aero), public :: &
          nlt_zaero    = 0    ! non-reacting layer aerosols
-
-      integer (kind=int_kind), dimension(max_mp), public :: &
-         nlt_zmp    = 0      ! non-reacting layer microplastics
 
       integer (kind=int_kind), public :: &
          nlt_bgc_Nit  = 0, & ! nutrients
@@ -205,9 +195,6 @@
       integer (kind=int_kind), dimension(max_aero), public :: &
          nt_zaero     = 0    !  black carbon and other aerosols
 
-      integer (kind=int_kind), dimension(max_mp), public :: &
-         nt_zmp     = 0      !  microplastics tracers
-
       integer (kind=int_kind), dimension(max_nbtrcr), public :: &
          bio_index_o  = 0    ! relates nlt_bgc_NO to ocean concentration index
                              ! see ocean_bio_all
@@ -226,7 +213,7 @@
       subroutine icepack_init_tracer_flags(&
            tr_iage_in, tr_FY_in, tr_lvl_in, tr_snow_in, &
            tr_pond_in, tr_pond_lvl_in, tr_pond_topo_in, &
-           tr_fsd_in, tr_aero_in, tr_mp_in, tr_iso_in, tr_brine_in, tr_zaero_in, tr_zmp_in, &
+           tr_fsd_in, tr_aero_in, tr_mp_in, tr_iso_in, tr_brine_in, tr_zaero_in, &
            tr_bgc_Nit_in, tr_bgc_N_in, tr_bgc_DON_in, tr_bgc_C_in, tr_bgc_chl_in, &
            tr_bgc_Am_in, tr_bgc_Sil_in, tr_bgc_DMS_in, tr_bgc_Fe_in, tr_bgc_hum_in, &
            tr_bgc_PON_in)
@@ -245,7 +232,6 @@
              tr_mp_in        , & ! if .true., use microplastics tracers
              tr_brine_in     , & ! if .true., brine height differs from ice thickness
              tr_zaero_in     , & ! if .true., black carbon is tracers  (n_zaero)
-             tr_zmp_in       , & ! if .true., z microplastic tracers  (n_zmp)
              tr_bgc_Nit_in   , & ! if .true., Nitrate tracer in ice
              tr_bgc_N_in     , & ! if .true., algal nitrogen tracers  (n_algae)
              tr_bgc_DON_in   , & ! if .true., DON pools are tracers  (n_don)
@@ -275,7 +261,6 @@
         if (present(tr_mp_in)     ) tr_mp      = tr_mp_in
         if (present(tr_brine_in)  ) tr_brine   = tr_brine_in
         if (present(tr_zaero_in)  ) tr_zaero   = tr_zaero_in
-        if (present(tr_zmp_in)    ) tr_zmp     = tr_zmp_in
         if (present(tr_bgc_Nit_in)) tr_bgc_Nit = tr_bgc_Nit_in
         if (present(tr_bgc_N_in)  ) tr_bgc_N   = tr_bgc_N_in
         if (present(tr_bgc_DON_in)) tr_bgc_DON = tr_bgc_DON_in
@@ -297,7 +282,7 @@
       subroutine icepack_query_tracer_flags(&
            tr_iage_out, tr_FY_out, tr_lvl_out, tr_snow_out, &
            tr_pond_out, tr_pond_lvl_out, tr_pond_topo_out, &
-           tr_fsd_out, tr_aero_out,tr_mp_out, tr_iso_out, tr_brine_out, tr_zaero_out, tr_zmp_out, &
+           tr_fsd_out, tr_aero_out,tr_mp_out, tr_iso_out, tr_brine_out, tr_zaero_out, &
            tr_bgc_Nit_out, tr_bgc_N_out, tr_bgc_DON_out, tr_bgc_C_out, tr_bgc_chl_out, &
            tr_bgc_Am_out, tr_bgc_Sil_out, tr_bgc_DMS_out, tr_bgc_Fe_out, tr_bgc_hum_out, &
            tr_bgc_PON_out)
@@ -316,7 +301,6 @@
              tr_mp_out        , & ! if .true., use microplastics tracers
              tr_brine_out     , & ! if .true., brine height differs from ice thickness
              tr_zaero_out     , & ! if .true., black carbon is tracers  (n_zaero)
-             tr_zmp_out       , & ! if .true., microplastic is tracers  (n_zmp)
              tr_bgc_Nit_out   , & ! if .true., Nitrate tracer in ice
              tr_bgc_N_out     , & ! if .true., algal nitrogen tracers  (n_algae)
              tr_bgc_DON_out   , & ! if .true., DON pools are tracers  (n_don)
@@ -346,7 +330,6 @@
         if (present(tr_mp_out)     ) tr_mp_out      = tr_mp
         if (present(tr_brine_out)  ) tr_brine_out   = tr_brine
         if (present(tr_zaero_out)  ) tr_zaero_out   = tr_zaero
-        if (present(tr_zmp_out)    ) tr_zmp_out     = tr_zmp
         if (present(tr_bgc_Nit_out)) tr_bgc_Nit_out = tr_bgc_Nit
         if (present(tr_bgc_N_out)  ) tr_bgc_N_out   = tr_bgc_N
         if (present(tr_bgc_DON_out)) tr_bgc_DON_out = tr_bgc_DON
@@ -387,7 +370,6 @@
         write(iounit,*) "  tr_mp      = ",tr_mp
         write(iounit,*) "  tr_brine   = ",tr_brine
         write(iounit,*) "  tr_zaero   = ",tr_zaero
-        write(iounit,*) "  tr_zmp     = ",tr_zmp
         write(iounit,*) "  tr_bgc_Nit = ",tr_bgc_Nit
         write(iounit,*) "  tr_bgc_N   = ",tr_bgc_N
         write(iounit,*) "  tr_bgc_DON = ",tr_bgc_DON
@@ -412,17 +394,17 @@
            nt_alvl_in, nt_vlvl_in, nt_apnd_in, nt_hpnd_in, nt_ipnd_in, &
            nt_smice_in, nt_smliq_in, nt_rhos_in, nt_rsnw_in, &
            nt_fsd_in, nt_isosno_in, nt_isoice_in, &
-           nt_aero_in, nt_mp_in, nt_mpsno_in, nt_mpice_in, &
-           nt_zaero_in, nt_zmp_in, nt_bgc_C_in, &
+           nt_aero_in, nt_mp_in, &
+           nt_zaero_in, nt_bgc_C_in, &
            nt_bgc_N_in, nt_bgc_chl_in, nt_bgc_DOC_in, nt_bgc_DON_in, &
            nt_bgc_DIC_in, nt_bgc_Fed_in, nt_bgc_Fep_in, nt_bgc_Nit_in, nt_bgc_Am_in, &
            nt_bgc_Sil_in, nt_bgc_DMSPp_in, nt_bgc_DMSPd_in, nt_bgc_DMS_in, nt_bgc_hum_in, &
-           nt_bgc_PON_in, nlt_zaero_in,nlt_zmp_in, nlt_bgc_C_in, nlt_bgc_N_in, nlt_bgc_chl_in, &
+           nt_bgc_PON_in, nlt_zaero_in, nlt_bgc_C_in, nlt_bgc_N_in, nlt_bgc_chl_in, &
            nlt_bgc_DOC_in, nlt_bgc_DON_in, nlt_bgc_DIC_in, nlt_bgc_Fed_in, &
            nlt_bgc_Fep_in, nlt_bgc_Nit_in, nlt_bgc_Am_in, nlt_bgc_Sil_in, &
            nlt_bgc_DMSPp_in, nlt_bgc_DMSPd_in, nlt_bgc_DMS_in, nlt_bgc_hum_in, &
            nlt_bgc_PON_in, nt_zbgc_frac_in, nt_bgc_S_in, nlt_chl_sw_in, &
-           nlt_zaero_sw_in, nlt_zmp_sw_in, &
+           nlt_zaero_sw_in, &
            bio_index_o_in, bio_index_in)
 
         integer, intent(in), optional :: &
@@ -447,8 +429,6 @@
              nt_isoice_in,  & ! starting index for isotopes in ice
              nt_aero_in,    & ! starting index for aerosols in ice
              nt_mp_in,      & ! starting index for microplastics in ice
-             nt_mpsno_in,  & ! starting index for microplastics in snow
-             nt_mpice_in,  & ! starting index for microplastics in ice
              nt_bgc_Nit_in, & ! nutrients
              nt_bgc_Am_in,  & !
              nt_bgc_Sil_in, & !
@@ -504,11 +484,6 @@
              nlt_zaero_in,  & !  black carbon and other aerosols
              nlt_zaero_sw_in  ! black carbon and dust in trcrn_sw
 
-        integer (kind=int_kind), dimension(:), intent(in), optional :: &
-              nt_zmp_in,   & !  microplastics tracer
-              nlt_zmp_in,  & !  microplastics tracer
-              nlt_zmp_sw_in  !  microplastics tracer in trcrn_sw
-
 !autodocument_end
 
         ! local
@@ -536,8 +511,6 @@
         if (present(nt_isoice_in)    ) nt_isoice     = nt_isoice_in
         if (present(nt_aero_in)      ) nt_aero       = nt_aero_in
         if (present(nt_mp_in)        ) nt_mp         = nt_mp_in
-        if (present(nt_mpsno_in)     ) nt_mpsno      = nt_mpsno_in
-        if (present(nt_mpice_in)     ) nt_mpice      = nt_mpice_in
         if (present(nt_bgc_Nit_in)   ) nt_bgc_Nit    = nt_bgc_Nit_in
         if (present(nt_bgc_Am_in)    ) nt_bgc_Am     = nt_bgc_Am_in
         if (present(nt_bgc_Sil_in)   ) nt_bgc_Sil    = nt_bgc_Sil_in
@@ -774,36 +747,6 @@
            endif
         endif
 
-        if (present(nt_zmp_in)) then
-           nsiz = size(nt_zmp_in)
-           if (size(nt_zmp) < nsiz) then
-              call icepack_warnings_add(subname//'error in nt_zmp size')
-              call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
-           else
-              nt_zmp(1:nsiz) = nt_zmp_in(1:nsiz)
-           endif
-        endif
-
-        if (present(nlt_zmp_in)) then
-           nsiz = size(nlt_zmp_in)
-           if (size(nlt_zmp) < nsiz) then
-              call icepack_warnings_add(subname//'error in nlt_zmp size')
-              call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
-           else
-              nlt_zaero(1:nsiz) = nlt_zmp_in(1:nsiz)
-           endif
-        endif
-
-        if (present(nlt_zmp_sw_in)) then
-           nsiz = size(nlt_zmp_sw_in)
-           if (size(nlt_zmp_sw) < nsiz) then
-              call icepack_warnings_add(subname//'error in nlt_zmp_sw size')
-              call icepack_warnings_setabort(.true.,__FILE__,__LINE__)
-           else
-              nlt_zmp_sw(1:nsiz) = nlt_zmp_sw_in(1:nsiz)
-           endif
-        endif
-
       end subroutine icepack_init_tracer_indices
 
 !=======================================================================
@@ -816,17 +759,17 @@
            nt_alvl_out, nt_vlvl_out, nt_apnd_out, nt_hpnd_out, nt_ipnd_out, &
            nt_smice_out, nt_smliq_out, nt_rhos_out, nt_rsnw_out, &
            nt_fsd_out, nt_isosno_out, nt_isoice_out, &
-           nt_aero_out, nt_mp_out, nt_mpsno_out, nt_mpice_out, &
-           nt_zaero_out, nt_zmp_out, nt_bgc_C_out, &
+           nt_aero_out, nt_mp_out, &
+           nt_zaero_out, nt_bgc_C_out, &
            nt_bgc_N_out, nt_bgc_chl_out, nt_bgc_DOC_out, nt_bgc_DON_out, &
            nt_bgc_DIC_out, nt_bgc_Fed_out, nt_bgc_Fep_out, nt_bgc_Nit_out, nt_bgc_Am_out, &
            nt_bgc_Sil_out, nt_bgc_DMSPp_out, nt_bgc_DMSPd_out, nt_bgc_DMS_out, nt_bgc_hum_out, &
-           nt_bgc_PON_out, nlt_zaero_out, nlt_zmp_out, nlt_bgc_C_out, nlt_bgc_N_out, nlt_bgc_chl_out, &
+           nt_bgc_PON_out, nlt_zaero_out, nlt_bgc_C_out, nlt_bgc_N_out, nlt_bgc_chl_out, &
            nlt_bgc_DOC_out, nlt_bgc_DON_out, nlt_bgc_DIC_out, nlt_bgc_Fed_out, &
            nlt_bgc_Fep_out, nlt_bgc_Nit_out, nlt_bgc_Am_out, nlt_bgc_Sil_out, &
            nlt_bgc_DMSPp_out, nlt_bgc_DMSPd_out, nlt_bgc_DMS_out, nlt_bgc_hum_out, &
            nlt_bgc_PON_out, nt_zbgc_frac_out, nt_bgc_S_out, nlt_chl_sw_out, &
-           nlt_zaero_sw_out, nlt_zmp_sw_out,&
+           nlt_zaero_sw_out, &
            bio_index_o_out, bio_index_out)
 
         integer, intent(out), optional :: &
@@ -851,8 +794,6 @@
              nt_isoice_out,  & ! starting index for isotopes in ice
              nt_aero_out,    & ! starting index for aerosols in ice
              nt_mp_out,      & ! starting index for microplastics in ice
-             nt_mpsno_out,   & ! starting index for microplastics in snow
-             nt_mpice_out,   & ! starting index for microplastics in ice
              nt_bgc_Nit_out, & ! nutrients
              nt_bgc_Am_out,  & !
              nt_bgc_Sil_out, & !
@@ -908,11 +849,6 @@
              nlt_zaero_out,  & !  black carbon and other aerosols
              nlt_zaero_sw_out  ! black carbon and dust in trcrn_sw
 
-        integer (kind=int_kind), dimension(:), intent(out), optional :: &
-              nt_zmp_out,   & !  microplastics tracers
-              nlt_zmp_out,  & !  microplastics tracers
-              nlt_zmp_sw_out  !  microplastics tracers in trcrn_sw
-
 !autodocument_end
 
         character(len=*),parameter :: subname='(icepack_query_tracer_indices)'
@@ -938,8 +874,6 @@
         if (present(nt_isoice_out)    ) nt_isoice_out     = nt_isoice
         if (present(nt_aero_out)      ) nt_aero_out       = nt_aero
         if (present(nt_mp_out)        ) nt_mp_out         = nt_mp
-        if (present(nt_mpsno_out)     ) nt_mpsno_out      = nt_mpsno
-        if (present(nt_mpice_out)     ) nt_mpice_out      = nt_mpice
         if (present(nt_bgc_Nit_out)   ) nt_bgc_Nit_out    = nt_bgc_Nit
         if (present(nt_bgc_Am_out)    ) nt_bgc_Am_out     = nt_bgc_Am
         if (present(nt_bgc_Sil_out)   ) nt_bgc_Sil_out    = nt_bgc_Sil
@@ -981,9 +915,6 @@
         if (present(nt_zaero_out)    ) nt_zaero_out     = nt_zaero
         if (present(nlt_zaero_out)   ) nlt_zaero_out    = nlt_zaero
         if (present(nlt_zaero_sw_out)) nlt_zaero_sw_out = nlt_zaero_sw
-        if (present(nt_zmp_out)      ) nt_zmp_out       = nt_zmp
-        if (present(nlt_zmp_out)     ) nlt_zmp_out      = nlt_zmp
-        if (present(nlt_zmp_sw_out)  ) nlt_zmp_sw_out   = nlt_zmp_sw
 
       end subroutine icepack_query_tracer_indices
 
@@ -1023,8 +954,6 @@
         write(iounit,*) "  nt_isoice     = ",nt_isoice
         write(iounit,*) "  nt_aero       = ",nt_aero
         write(iounit,*) "  nt_mp         = ",nt_mp
-        write(iounit,*) "  nt_mpsno      = ",nt_mpsno
-        write(iounit,*) "  nt_mpice      = ",nt_mpice
         write(iounit,*) "  nt_bgc_Nit    = ",nt_bgc_Nit
         write(iounit,*) "  nt_bgc_Am     = ",nt_bgc_Am
         write(iounit,*) "  nt_bgc_Sil    = ",nt_bgc_Sil
@@ -1094,13 +1023,6 @@
            write(iounit,*) "  nlt_zaero_sw(k) = ",k,nlt_zaero_sw(k)
         enddo
 
-        write(iounit,*) "  max_mp = ",max_mp
-        do k = 1, max_mp
-           write(iounit,*) "  nt_zmp(k)     = ",k,nt_zmp(k)
-           write(iounit,*) "  nlt_zmp(k)    = ",k,nlt_zmp(k)
-           write(iounit,*) "  nlt_zmp_sw(k) = ",k,nlt_zmp_sw(k)
-        enddo
-
       end subroutine icepack_write_tracer_indices
 
 !=======================================================================
@@ -1111,7 +1033,7 @@
          ncat_in, nilyr_in, nslyr_in, nblyr_in, nfsd_in  , &
          n_algae_in, n_DOC_in, n_aero_in, n_mp_in, n_iso_in, &
          n_DON_in, n_DIC_in, n_fed_in, n_fep_in, n_zaero_in, &
-         n_zmp_in, ntrcr_in, ntrcr_o_in, nbtrcr_in, nbtrcr_sw_in)
+         ntrcr_in, ntrcr_o_in, nbtrcr_in, nbtrcr_sw_in)
 
       integer (kind=int_kind), intent(in), optional :: &
          ncat_in   , & ! Categories
@@ -1126,7 +1048,6 @@
          n_fed_in  , & !
          n_fep_in  , & !
          n_zaero_in, & !
-         n_zmp_in  , & !
          n_iso_in  , & !
          n_aero_in , & !
          n_mp_in   , & !
@@ -1152,7 +1073,6 @@
         if (present(n_fed_in)    ) n_fed     = n_fed_in
         if (present(n_fep_in)    ) n_fep     = n_fep_in
         if (present(n_zaero_in)  ) n_zaero   = n_zaero_in
-        if (present(n_zmp_in)    ) n_zmp     = n_zmp_in
         if (present(n_iso_in)    ) n_iso     = n_iso_in
         if (present(n_aero_in)   ) n_aero    = n_aero_in
         if (present(n_mp_in)     ) n_mp      = n_mp_in
@@ -1177,7 +1097,7 @@
          ncat_out, nilyr_out, nslyr_out, nblyr_out, nfsd_out, &
          n_algae_out, n_DOC_out, n_aero_out, n_mp_out, n_iso_out, &
          n_DON_out, n_DIC_out, n_fed_out, n_fep_out, n_zaero_out, &
-         n_zmp_out, ntrcr_out, ntrcr_o_out, nbtrcr_out, nbtrcr_sw_out)
+         ntrcr_out, ntrcr_o_out, nbtrcr_out, nbtrcr_sw_out)
 
       integer (kind=int_kind), intent(out), optional :: &
          max_algae_out  , & ! maximum number of algal types
@@ -1204,7 +1124,6 @@
          n_fed_out  , & !
          n_fep_out  , & !
          n_zaero_out, & !
-         n_zmp_out  , & !
          n_iso_out  , & !
          n_aero_out , & !
          n_mp_out   , & !
@@ -1241,7 +1160,6 @@
         if (present(n_fed_out)    ) n_fed_out     = n_fed
         if (present(n_fep_out)    ) n_fep_out     = n_fep
         if (present(n_zaero_out)  ) n_zaero_out   = n_zaero
-        if (present(n_zmp_out)    ) n_zmp_out     = n_zmp
         if (present(n_aero_out)   ) n_aero_out    = n_aero
         if (present(n_mp_out)     ) n_mp_out      = n_mp
         if (present(n_iso_out)    ) n_iso_out     = n_iso
@@ -1292,7 +1210,6 @@
         write(iounit,*) "  n_fed     = ",n_fed
         write(iounit,*) "  n_fep     = ",n_fep
         write(iounit,*) "  n_zaero   = ",n_zaero
-        write(iounit,*) "  n_zmp     = ",n_zmp
         write(iounit,*) "  n_aero    = ",n_aero
         write(iounit,*) "  n_mp      = ",n_mp
         write(iounit,*) "  n_iso     = ",n_iso
