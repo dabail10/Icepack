@@ -278,11 +278,12 @@
         endif
         if (tr_fluff) then
           do k = 1, n_fluff
-             write(nu_diag_out+n-1,901) 'fluffball gain from atm = ',ffluff_atm(n,k)*dt,k
-             write(nu_diag_out+n-1,901) 'fluffball loss to ocn   = ',ffluff_ocn(n,k)*dt,k
-             write(nu_diag_out+n-1,901) 'fluffball gain or loss  = ',(ffluff_atm(n,k)-ffluff_ocn(n,k))*dt,k
-             write(nu_diag_out+n-1,901) 'fluffball concentration = ',pdfluff(n,k),k
-             write(nu_diag_out+n-1,901) 'fluffball total         = ',trcr(n,nt_fluff+k-1)*aice(n)
+             write(nu_diag_out+n-1,901) 'fluffball gain from atm = ',ffluff_atm(n,k)*dt
+             write(nu_diag_out+n-1,901) 'fluffball loss to ocn   = ',ffluff_ocn(n,k)*dt
+             write(nu_diag_out+n-1,901) 'fluffball gain or loss  = ',(ffluff_atm(n,k)-ffluff_ocn(n,k))*dt
+             write(nu_diag_out+n-1,901) 'fluffball conc chg      = ',pdfluff(n,k)
+             write(nu_diag_out+n-1,901) 'fluffball ice avg       = ',trcr(n,nt_fluff+k-1)
+             write(nu_diag_out+n-1,901) 'fluffball grid avg      = ',trcr(n,nt_fluff+k-1)*aice(n)
           enddo
         endif
       end do

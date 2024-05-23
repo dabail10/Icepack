@@ -14,23 +14,11 @@ set fieldlist=("area fraction  " \
                "avg ice thickness (m)" \
                "avg snow depth (m)" \
                "air temperature (C)" \
-               "shortwave radiation sum" \
-               "longwave radiation" \
-               "snowfall" \
-               "avg salinity (ppt)" \
-               "surface temperature(C)" \
-               "outward longwave flx" \
-               "sensible heat flx" \
-               "latent heat flx" \
-               "fluffball total" \
+               "fluffball ice avg" \
+               "fluffball grid avg" )
 #               "subl/cond (m ice)" \
-               "top melt (m)" \
-               "bottom melt (m)" \
-               "lateral melt (m)" \
-               "new ice (m)" \
-               "congelation (m)" \
 #               "snow-ice (m)" \
-               "intnl enrgy chng(W/m^2)")
+#              "intnl enrgy chng(W/m^2)")
 
 # Get the filename for the latest log
 set logfile = $1
